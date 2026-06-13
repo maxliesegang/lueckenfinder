@@ -1,0 +1,355 @@
+/*
+ * Styling for the imperative MapLibre island: native map controls, popups, and
+ * the result markers. Kept separate from the React overlay panels so the map
+ * presentation can evolve on its own.
+ */
+
+/*
+ * Native controls live in the bottom-right corner, the only one not occupied
+ * by a floating overlay panel (control panel top-left, status toast top-center,
+ * settings toolbar top-right, results legend bottom-left). The top-right offset
+ * is kept as a safety net in case a control is ever moved up there.
+ */
+.maplibregl-ctrl-top-right {
+  margin-top: 4.5rem;
+}
+
+.maplibregl-ctrl-bottom-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--kern-metric-space-small, 8px);
+}
+
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl {
+  margin: 0;
+}
+
+.maplibregl-ctrl-group {
+  border: 1px solid var(--app-border);
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  box-shadow: var(--app-shadow-soft);
+  overflow: clip;
+}
+
+.maplibregl-ctrl-group button:focus-visible {
+  outline: 3px solid var(--app-focus);
+  outline-offset: -3px;
+}
+
+/* Keep the attribution legible against the raster basemap. */
+.maplibregl-ctrl-attrib.maplibregl-compact {
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.maplibregl-ctrl-scale {
+  border-color: var(--app-border-strong);
+  border-radius: 0 0 var(--kern-metric-border-radius-default, 4px)
+    var(--kern-metric-border-radius-default, 4px);
+  background: var(--app-panel-soft);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.maplibregl-popup-content {
+  border: 1px solid var(--app-border);
+  border-radius: var(--kern-metric-border-radius-large, 8px);
+  background: var(--app-panel);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow);
+  font-size: var(--kern-font-size-16, 1rem);
+  padding: 0;
+}
+
+.maplibregl-popup-tip {
+  filter: drop-shadow(0 4px 6px rgba(19, 21, 37, 0.12));
+}
+
+.maplibregl-popup-close-button {
+  top: 0.45rem;
+  right: 0.45rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  color: var(--app-ink);
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 0;
+}
+
+.maplibregl-popup-close-button:hover {
+  background: var(--app-panel-soft);
+}
+
+.maplibregl-popup-close-button:focus-visible {
+  outline: 3px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.popup {
+  width: min(400px, calc(100vw - 64px));
+  min-width: 280px;
+  max-height: min(68dvh, 620px);
+  overflow-y: auto;
+  border-top: 6px solid var(--popup-color, var(--app-primary));
+  padding: 1rem 1rem 0.9rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border-strong) transparent;
+}
+
+.popup--missing {
+  --popup-color: var(--bucket-missing);
+  --popup-soft: var(--popup-missing-soft);
+}
+
+.popup--tagging {
+  --popup-color: var(--bucket-tagging);
+  --popup-soft: var(--popup-tagging-soft);
+}
+
+.popup--matched {
+  --popup-color: var(--bucket-matched);
+  --popup-soft: var(--popup-matched-soft);
+}
+
+.popup--review {
+  --popup-color: var(--bucket-review);
+  --popup-soft: var(--popup-review-soft);
+}
+
+.popup > strong {
+  display: inline-flex;
+  max-width: calc(100% - 2.25rem);
+  align-items: center;
+  gap: var(--kern-metric-space-small, 8px);
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  background: var(--popup-soft, var(--app-primary-soft));
+  color: var(--popup-color, var(--app-primary));
+  font-size: var(--kern-font-size-12, 0.75rem);
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 0.25rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.popup-title {
+  margin-top: var(--kern-metric-space-small, 8px);
+  padding-right: 1.75rem;
+  color: var(--app-ink);
+  font-size: var(--kern-font-size-20, 1.25rem);
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.popup .hint {
+  margin: 0.75rem 0;
+  color: var(--app-muted);
+  font-size: var(--kern-font-size-16, 1rem);
+  line-height: 1.45;
+}
+
+.popup table.pp {
+  width: 100%;
+  margin: var(--kern-metric-space-small, 8px) 0 0;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.popup table.pp td {
+  padding: 0.5rem 0.35rem;
+  border-top: 1px solid var(--app-border);
+  font-size: var(--kern-font-size-16, 1rem);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.popup table.pp td:first-child {
+  width: 36%;
+  color: var(--app-muted);
+  font-family: var(--kern-typography-font-family-fira-mono, ui-monospace, monospace);
+  font-size: var(--kern-font-size-12, 0.75rem);
+}
+
+.popup table.pp th {
+  padding: 0.35rem 0.35rem 0.25rem;
+  color: var(--app-muted);
+  font-size: var(--kern-font-size-12, 0.75rem);
+  font-weight: 800;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.popup .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kern-metric-space-small, 8px);
+  margin-top: var(--kern-metric-space-default, 16px);
+  padding-top: var(--kern-metric-space-default, 16px);
+  border-top: 1px solid var(--app-border);
+}
+
+.popup .actions a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  border: 2px solid var(--app-primary);
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  color: var(--app-primary);
+  font-size: var(--kern-font-size-16, 1rem);
+  font-weight: 800;
+  line-height: 1.2;
+  padding: 0.45rem 0.65rem;
+  text-decoration: none;
+}
+
+.popup .actions a:hover {
+  background: var(--app-primary-soft);
+}
+
+.popup .actions a:focus-visible {
+  outline: 3px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.popup .actions a:first-child {
+  background: var(--app-primary);
+  color: var(--kern-color-white, #ffffff);
+}
+
+.popup .actions a:first-child:hover {
+  background: var(--app-primary-hover);
+}
+
+.dist-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: var(--kern-metric-space-small, 8px);
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  background: var(--kern-color-turquois-050, #e5faf4);
+  color: var(--kern-color-turquois-750, #006b5d);
+  font-size: var(--kern-font-size-12, 0.75rem);
+  font-weight: 800;
+  padding: 0.1rem 0.45rem;
+  vertical-align: middle;
+}
+
+.osm-ref {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted);
+  font-family: var(--kern-typography-font-family-fira-mono, ui-monospace, monospace);
+  font-size: var(--kern-font-size-12, 0.75rem);
+}
+
+.detail-card {
+  margin: var(--kern-metric-space-default, 16px) 0 0;
+  border: 1px solid var(--app-border);
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  background: var(--app-panel);
+  overflow: clip;
+}
+
+.detail-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--kern-metric-space-small, 8px);
+  color: var(--app-ink);
+  cursor: pointer;
+  font-size: var(--kern-font-size-12, 0.75rem);
+  font-weight: 800;
+  list-style: none;
+  padding: 0.7rem 0.75rem;
+  text-transform: uppercase;
+}
+
+.detail-card[open] > .detail-heading {
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-panel-soft);
+}
+
+.detail-heading::-webkit-details-marker {
+  display: none;
+}
+
+.detail-heading::marker {
+  content: "";
+}
+
+.detail-heading::after {
+  color: var(--app-primary);
+  content: "+";
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.detail-card[open] > .detail-heading::after {
+  content: "-";
+}
+
+.detail-heading:focus-visible {
+  outline: 3px solid var(--app-focus);
+  outline-offset: -3px;
+}
+
+.detail-ref {
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  text-transform: none;
+}
+
+.detail-list {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0 0.75rem 0.35rem;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.36fr) minmax(0, 1fr);
+  gap: var(--kern-metric-space-small, 8px);
+  padding: 0.35rem 0;
+}
+
+.detail-row + .detail-row {
+  border-top: 1px solid var(--app-border);
+}
+
+.detail-row dt,
+.detail-row dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.detail-row dt {
+  color: var(--app-muted);
+  font-size: var(--kern-font-size-12, 0.75rem);
+  line-height: 1.35;
+}
+
+.detail-row dd {
+  color: var(--app-ink);
+  font-size: var(--kern-font-size-16, 1rem);
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.hint.all-good {
+  color: var(--app-success);
+}
+
+@media (max-width: 430px) {
+  .popup {
+    width: calc(100vw - 56px);
+    min-width: 220px;
+  }
+
+  .detail-row {
+    grid-template-columns: 1fr;
+  }
+}

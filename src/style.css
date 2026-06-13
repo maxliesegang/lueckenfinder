@@ -1,0 +1,270 @@
+:root {
+  --app-bg: var(--kern-color-layout-background-hued, #f7f7fb);
+  --app-panel: var(--kern-color-layout-background-default, #ffffff);
+  --app-panel-soft: var(--kern-color-layout-background-hued, #eef0f5);
+  --app-ink: var(--kern-color-layout-text-default, #131525);
+  --app-muted: var(--kern-color-layout-text-muted, #676b7a);
+  --app-border: var(--kern-color-layout-border, #d4d8e3);
+  --app-border-strong: var(--kern-color-form-input-border, #aeb4c4);
+  --app-primary: var(--kern-color-action-default, #243c8f);
+  --app-primary-soft: var(
+    --kern-color-action-state-indicator-tint-hover-opacity,
+    #eef1fb
+  );
+  --app-success: var(--kern-color-feedback-success, #187a3f);
+  --app-danger: var(--kern-color-feedback-danger, #bd0f09);
+  --app-warning: var(--kern-color-feedback-warning, #a65d00);
+  --app-shadow: 0 16px 40px rgba(19, 21, 37, 0.16);
+  --app-shadow-soft: 0 8px 24px rgba(19, 21, 37, 0.1);
+  --app-focus: var(--kern-color-action-focus-border-outside, #454b6b);
+  --app-primary-hover: color-mix(in oklch, var(--app-primary) 86%, black);
+
+  /* Bucket colours, shared with the map layers. */
+  --bucket-missing: #e4572e;
+  --bucket-tagging: #f59e0b;
+  --bucket-matched: #3d9970;
+  --bucket-review: #386fa4;
+
+  --popup-missing-soft: #fff4ef;
+  --popup-tagging-soft: #fff7e8;
+  --popup-matched-soft: #ecf8f2;
+  --popup-review-soft: #eef6fd;
+
+  /* Glassy overlay surface that floats over the map. */
+  --overlay-surface: color-mix(in oklch, var(--app-panel) 92%, transparent);
+  --overlay-radius: var(--kern-metric-border-radius-large, 8px);
+  --overlay-gap: var(--kern-metric-space-default, 16px);
+
+  color-scheme: light;
+}
+
+[data-kern-theme="dark"] {
+  --app-shadow: 0 16px 40px rgba(0, 0, 0, 0.44);
+  --app-shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --app-primary-hover: color-mix(in oklch, var(--app-primary) 78%, white);
+  --overlay-surface: color-mix(in oklch, var(--app-panel) 86%, transparent);
+  --popup-missing-soft: color-mix(in oklch, #e4572e 26%, transparent);
+  --popup-tagging-soft: color-mix(in oklch, #f59e0b 24%, transparent);
+  --popup-matched-soft: color-mix(in oklch, #3d9970 24%, transparent);
+  --popup-review-soft: color-mix(in oklch, #386fa4 28%, transparent);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  min-height: 100%;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-ink);
+}
+
+body {
+  overflow: hidden;
+}
+
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 9999;
+  border-radius: 0 0 var(--kern-metric-border-radius-default, 4px) 0;
+  background: var(--app-primary);
+  color: var(--kern-color-white, #ffffff);
+  font-weight: 700;
+  padding: var(--kern-metric-space-small, 8px) var(--kern-metric-space-default, 16px);
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* ---- Full-bleed map shell ---------------------------------------------- */
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/*
+ * The overlay layer spans the whole viewport but ignores pointer events, so
+ * the map stays draggable between the floating panels. Each panel re-enables
+ * pointer events for itself.
+ */
+.overlay-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "top-left    top-center    top-right"
+    "mid-left    .             mid-right"
+    "bottom-left bottom-center bottom-right";
+  gap: var(--overlay-gap);
+  padding: var(--overlay-gap);
+  pointer-events: none;
+}
+
+.overlay-layer > * {
+  pointer-events: auto;
+  min-width: 0;
+}
+
+.overlay-slot--top-left {
+  grid-area: top-left;
+  justify-self: start;
+}
+
+.overlay-slot--top-right {
+  grid-area: top-right;
+  justify-self: end;
+}
+
+.overlay-slot--top-center {
+  grid-area: top-center;
+  justify-self: center;
+  align-self: start;
+}
+
+.overlay-slot--bottom-left {
+  grid-area: bottom-left;
+  align-self: end;
+  justify-self: start;
+}
+
+/* ---- Shared floating panel surface ------------------------------------ */
+
+.overlay-panel {
+  display: flex;
+  width: min(360px, calc(100vw - 2 * var(--overlay-gap)));
+  flex-direction: column;
+  border: 1px solid var(--app-border);
+  border-radius: var(--overlay-radius);
+  background: var(--overlay-surface);
+  box-shadow: var(--app-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  overflow: hidden;
+}
+
+.overlay-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--kern-metric-space-small, 8px);
+  padding: 0.75rem var(--kern-metric-space-default, 16px);
+}
+
+.overlay-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kern-metric-space-default, 16px);
+  padding: 0 var(--kern-metric-space-default, 16px)
+    var(--kern-metric-space-default, 16px);
+}
+
+.overlay-panel__body--scroll {
+  max-height: min(64dvh, 640px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--app-border-strong) transparent;
+}
+
+.section-label {
+  margin: 0 0 var(--kern-metric-space-small, 8px);
+  color: var(--app-muted);
+  font-size: var(--kern-font-size-12, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Shared KERN field tweaks so inputs read well on the glassy surface. */
+.kern-form-input__input,
+.kern-form-input__select,
+select.kern-form-input__select {
+  border: 1px solid var(--app-border-strong);
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  background-color: var(--app-panel);
+  color: var(--app-ink);
+  min-height: 2.75rem;
+}
+
+.kern-form-input__input::placeholder {
+  color: var(--app-muted);
+  opacity: 1;
+}
+
+.kern-form-input__input:focus,
+.kern-form-input__select:focus {
+  border-color: transparent;
+  background-color: var(--app-panel);
+  color: var(--app-ink);
+  outline: 4px solid var(--app-focus);
+  outline-offset: 2px;
+}
+
+.kern-btn--secondary,
+.kern-btn--tertiary {
+  color: var(--app-primary);
+}
+
+.kern-btn[hidden] {
+  display: none;
+}
+
+[hidden] {
+  display: none;
+}
+
+/* ---- Responsive: stack panels for narrow viewports -------------------- */
+
+@media (max-width: 760px) {
+  .overlay-layer {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    grid-template-areas:
+      "top-right"
+      "top-left"
+      "top-center"
+      "bottom-left";
+    gap: var(--kern-metric-space-small, 8px);
+    padding: var(--kern-metric-space-small, 8px);
+  }
+
+  .overlay-slot--top-left,
+  .overlay-slot--top-right,
+  .overlay-slot--top-center,
+  .overlay-slot--bottom-left {
+    justify-self: stretch;
+  }
+
+  .overlay-slot--top-right {
+    justify-self: end;
+  }
+
+  .overlay-panel {
+    width: 100%;
+  }
+}

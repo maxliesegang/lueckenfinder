@@ -1,0 +1,29 @@
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--kern-metric-space-small, 8px);
+  border-radius: 999px;
+  background: var(--overlay-surface);
+  box-shadow: var(--app-shadow-soft);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 0.25rem;
+}
+
+.map-toolbar .settings-trigger {
+  margin: 0;
+}
+
+.app-menu-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kern-metric-space-small, 8px);
+}
+
+.app-menu-body > :is(h1, h2, h3, h4, h5, h6) {
+  margin: 0.25rem 0 0;
+}
+
+.app-menu-body > :is(h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 0;
+}

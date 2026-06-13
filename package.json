@@ -1,0 +1,49 @@
+{
+  "name": "lueckenfinder",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Find gaps between official open city data and OpenStreetMap, then fix them manually.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint --error-on-warnings src scripts tests .vscode index.html package.json tsconfig.json vite.config.ts biome.json",
+    "lint:fix": "biome lint --write src scripts tests .vscode index.html package.json tsconfig.json vite.config.ts biome.json",
+    "format": "biome format --write src scripts tests .vscode index.html package.json tsconfig.json vite.config.ts biome.json",
+    "format:check": "biome format src scripts tests .vscode index.html package.json tsconfig.json vite.config.ts biome.json",
+    "quality": "biome check --error-on-warnings src scripts tests .vscode index.html package.json tsconfig.json vite.config.ts biome.json",
+    "quality:fix": "biome check --write src scripts tests .vscode index.html package.json tsconfig.json vite.config.ts biome.json",
+    "test": "tsx --test tests/*.test.ts",
+    "verify": "npm run typecheck && npm run quality && npm test",
+    "check": "npm run verify && npm run build",
+    "fetch:presets": "tsx scripts/fetch-presets.ts",
+    "fetch:presets:best-effort": "tsx scripts/fetch-presets.ts --best-effort"
+  },
+  "dependencies": {
+    "@kern-ux-annex/kern-react-kit": "^2.40.0",
+    "flatbush": "^4.4.0",
+    "i18next": "^26.3.1",
+    "maplibre-gl": "^5.24.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.8",
+    "react-map-gl": "^8.1.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.0",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "tsx": "^4.19.2",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16"
+  }
+}

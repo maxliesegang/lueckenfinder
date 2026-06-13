@@ -1,0 +1,31 @@
+.status-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--kern-metric-space-small, 8px);
+  max-width: min(440px, calc(100vw - 2 * var(--overlay-gap)));
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--overlay-surface);
+  box-shadow: var(--app-shadow);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  padding: 0.5rem 1rem;
+  color: var(--app-ink);
+  font-size: var(--kern-font-size-16, 1rem);
+  font-weight: 700;
+}
+
+.status-toast__loader {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  /* KernLoader ships at a fixed size; scale it down for the pill. */
+  transform: scale(0.6);
+  transform-origin: center;
+  margin: -0.75rem;
+}
+
+.status-toast__message {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -1,0 +1,38 @@
+.dataset-source-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kern-metric-space-default, 16px);
+  margin: 0;
+}
+
+.dataset-source-form .form-header {
+  margin-bottom: 0;
+}
+
+.dataset-source-form .dataset-source-form__field {
+  margin: 0;
+}
+
+.dataset-source-form textarea.kern-form-input__input {
+  min-height: 6rem;
+  resize: vertical;
+  font-family: var(--kern-typography-font-family-fira-mono, ui-monospace, monospace);
+  font-size: var(--kern-font-size-14, 0.875rem);
+}
+
+.dataset-source-form .dataset-source-form__actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--kern-metric-space-small, 8px);
+  margin: 0;
+}
+
+.dataset-source-form .dataset-source-form__actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--kern-metric-space-small, 8px);
+}
+
+.dataset-source-form .dataset-source-form__actions-row .kern-btn {
+  flex: 1 1 auto;
+}

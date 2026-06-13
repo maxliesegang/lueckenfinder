@@ -1,0 +1,111 @@
+.legend-panel {
+  width: min(300px, calc(100vw - 2 * var(--overlay-gap)));
+}
+
+.legend-panel__header {
+  align-items: flex-start;
+}
+
+.legend-panel__title {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+}
+
+.legend-panel__total {
+  font-size: var(--kern-font-size-12, 0.75rem);
+  font-weight: 600;
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.legend-panel__body {
+  display: flex;
+  flex-direction: column;
+}
+
+.legend-panel__actions {
+  display: flex;
+  gap: var(--kern-metric-space-small, 8px);
+  border-top: 1px solid var(--app-border);
+  margin: 0 0.5rem;
+  padding: 0.5rem 0 0.25rem;
+}
+
+.legend-panel__actions .kern-btn {
+  flex: 1;
+  font-size: var(--kern-font-size-12, 0.75rem);
+}
+
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 0.5rem 0.5rem;
+  list-style: none;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--kern-metric-space-small, 8px);
+  border-radius: var(--kern-metric-border-radius-default, 4px);
+  cursor: pointer;
+  padding: 0.4rem 0.5rem;
+  transition: background 0.15s ease;
+}
+
+.legend-row:hover {
+  background: var(--app-panel-soft);
+}
+
+.legend-row:focus-within {
+  outline: 3px solid var(--app-focus);
+  outline-offset: -2px;
+}
+
+.legend-row--muted {
+  opacity: 0.55;
+}
+
+.legend-row__toggle {
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: pointer;
+}
+
+.legend-row__dot {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 50%;
+  background: var(--bucket-color, var(--app-primary));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--bucket-color) 28%, transparent);
+}
+
+.legend-row__text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.legend-row__name {
+  font-size: var(--kern-font-size-16, 1rem);
+  font-weight: 700;
+  color: var(--app-ink);
+}
+
+.legend-row__action {
+  font-size: var(--kern-font-size-12, 0.75rem);
+  color: var(--app-muted);
+}
+
+.legend-row__count {
+  font-size: var(--kern-font-size-20, 1.25rem);
+  font-weight: 800;
+  color: var(--bucket-color, var(--app-primary));
+  font-variant-numeric: tabular-nums;
+}
