@@ -191,11 +191,12 @@ nwr["amenity"="recycling"]["recycling:glass"="yes"]({{bbox}});`,
     source: "preset",
     geojsonUrl:
       "https://geoportal.karlsruhe.de/ags04/rest/services/Hosted/Stadtplan_POIs_Sportanlagen/FeatureServer/0/query?where=gruppenname_de%3D%27Tischtennisplatten%27&outFields=name%2Cgruppenname_de&returnGeometry=true&f=geojson",
-    overpassQuery: 'nwr["leisure"="pitch"]["sport"="table_tennis"]({{bbox}});',
+    overpassQuery:
+      'nwr["leisure"="pitch"]["sport"="table_tennis"]["access"!="private"]({{bbox}});',
     attribution: "Datenquelle: Geoportal Stadt Karlsruhe",
     sourceUrl: "https://geoportal.karlsruhe.de/",
-    broadMatchQuery: `nwr["sport"="table_tennis"]({{bbox}});
-nwr["leisure"="table_tennis_table"]({{bbox}});`,
+    broadMatchQuery: `nwr["sport"="table_tennis"]["access"!="private"]({{bbox}});
+nwr["leisure"="table_tennis_table"]["access"!="private"]({{bbox}});`,
     tagMapping: {
       fixed: {
         leisure: "pitch",
@@ -225,7 +226,7 @@ nwr["leisure"="table_tennis_table"]({{bbox}});`,
     source: "preset",
     geojsonUrl:
       "https://geoportal.karlsruhe.de/ags04/rest/services/Hosted/Stadtplan_POIs_Kinder_Jugendliche/FeatureServer/0/query?where=gruppenname_de%3D%27Spielpl%C3%A4tze%27&outFields=name%2Cgruppenname_de&returnGeometry=true&f=geojson",
-    overpassQuery: 'nwr["leisure"="playground"]({{bbox}});',
+    overpassQuery: 'nwr["leisure"="playground"]["access"!="private"]({{bbox}});',
     attribution: "Datenquelle: Geoportal Stadt Karlsruhe",
     sourceUrl: "https://geoportal.karlsruhe.de/",
     tagMapping: {
