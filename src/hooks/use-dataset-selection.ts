@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { DEFAULT_MATCH_RADIUS_M } from "../dataset-constraints";
+import { DEFAULT_MATCH_RADIUS_M } from "../constraints";
 import type { Dataset } from "../types";
 
 export interface DatasetSelection {

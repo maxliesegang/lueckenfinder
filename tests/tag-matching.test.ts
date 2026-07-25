@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { PRESETS } from "../src/presets";
+import { PRESET_DATASETS } from "../src/presets";
 import { expectedTags, findTagGaps } from "../src/tag-matching";
 import type { Dataset, DatasetPoint } from "../src/types";
 
@@ -56,14 +56,14 @@ const fixedPresetTags: Record<string, Record<string, string>> = {
 
 for (const [presetId, tags] of Object.entries(fixedPresetTags)) {
   test(`${presetId} resolves its fixed tags`, () => {
-    const preset = PRESETS.find(({ id }) => id === presetId);
+    const preset = PRESET_DATASETS.find(({ id }) => id === presetId);
     assert.ok(preset);
     assert.deepEqual(expectedTags(point(), preset), tags);
   });
 }
 
 test("bicycle parking resolves conditional property tags", () => {
-  const preset = PRESETS.find(({ id }) => id === "ka-bicycle-parking");
+  const preset = PRESET_DATASETS.find(({ id }) => id === "ka-bicycle-parking");
   assert.ok(preset);
 
   assert.deepEqual(
@@ -104,7 +104,7 @@ test("bicycle parking resolves conditional property tags", () => {
 });
 
 test("car parks resolve capacity when available", () => {
-  const preset = PRESETS.find(({ id }) => id === "ka-car-parks");
+  const preset = PRESET_DATASETS.find(({ id }) => id === "ka-car-parks");
   assert.ok(preset);
 
   assert.deepEqual(expectedTags(point({ gesamte_parkplaetze: 612 }), preset), {

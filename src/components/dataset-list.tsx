@@ -1,4 +1,5 @@
 import { type KeyboardEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { datasetBadgeKey } from "../dataset-badges";
 import { filterAndSortDatasets } from "../datasets";
 import { useI18n } from "../hooks/use-i18n";
 import type { Dataset } from "../types";
@@ -96,7 +97,7 @@ export function DatasetList({
     >
       {visibleDatasets.map((dataset, index) => {
         const selected = dataset.id === selectedDatasetId;
-        const isCustom = dataset.source === "custom";
+        const badgeKey = datasetBadgeKey(dataset.source);
         return (
           <button
             key={dataset.id}
@@ -112,9 +113,9 @@ export function DatasetList({
             }}
           >
             <span className="dataset-item__label">{dataset.label}</span>
-            {isCustom && (
+            {badgeKey && (
               <span className="kern-badge kern-badge--info dataset-badge">
-                {t("dataset.customBadge")}
+                {t(badgeKey)}
               </span>
             )}
           </button>

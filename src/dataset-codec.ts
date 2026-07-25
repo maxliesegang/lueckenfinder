@@ -17,7 +17,9 @@ interface SharePayload {
 export function encodeStoragePayload(datasets: readonly Dataset[]): string {
   const payload: StoragePayload = {
     version: PAYLOAD_VERSION,
-    datasets: datasets.map(({ source: _source, ...definition }) => definition),
+    datasets: datasets.map(
+      ({ source: _source, cityId: _cityId, ...definition }) => definition,
+    ),
   };
   return JSON.stringify(payload);
 }

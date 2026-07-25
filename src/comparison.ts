@@ -3,7 +3,7 @@ import {
   isValidMatchRadiusM,
   MATCH_RADIUS_ERROR,
   MAX_MATCH_RADIUS_M,
-} from "./dataset-constraints";
+} from "./constraints";
 import { type BBox, bboxOfPoints, padBbox } from "./geo";
 import { loadOfficial } from "./official";
 import { runOverpass } from "./overpass";

@@ -74,9 +74,43 @@ export interface DatasetDefinition {
  *
  * Presets are shipped in the repo and are read-only. Custom mappings are
  * created by users at runtime and live only in localStorage (or a share link).
+ * Imported datasets come from a city pack the user loaded from a URL: read-only
+ * like a preset, but removed as a unit with their city rather than one at a
+ * time.
  */
 export interface Dataset extends DatasetDefinition {
-  source: "preset" | "custom";
+  source: "preset" | "custom" | "imported";
+  /** Set for datasets that came from a city pack; see CityPack. */
+  cityId?: string;
+}
+
+/**
+ * The place a set of datasets belongs to. Nothing in the comparison engine is
+ * city-aware — a city only supplies the initial map view and groups datasets
+ * in the UI. Overpass bounding boxes still come from the official data extent.
+ */
+export interface CityDefinition {
+  id: string;
+  /** Display name, e.g. "Karlsruhe". */
+  name: string;
+  /** Initial map centre as [lon, lat]. */
+  center: [lon: number, lat: number];
+  /** Initial map zoom. */
+  zoom: number;
+  /** Optional ISO 3166-1 alpha-2 country code, e.g. "DE". */
+  country?: string;
+  /** Optional open-data portal for the city. */
+  sourceUrl?: string;
+}
+
+/**
+ * A city plus the datasets curated for it. Packs are the unit of contribution:
+ * shipped ones live in presets/<city>.json, and the same shape can be loaded
+ * from a remote URL without touching this repo.
+ */
+export interface CityPack {
+  city: CityDefinition;
+  datasets: DatasetDefinition[];
 }
 
 /** A normalised point extracted from either dataset. */

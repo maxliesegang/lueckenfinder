@@ -49,13 +49,46 @@ npm run format        # format all supported project files
 `npm run build` produces a static `dist/`. The included GitHub Action builds,
 caches preset data, and deploys to Pages on push and weekly.
 
+## Cities
+
+The app shows one city at a time, picked in the control panel. The choice is
+remembered and reflected in the URL (`?city=karlsruhe`), so a link can open the
+app on a specific city. Selecting a city sets the initial map view and narrows
+the dataset list; your own custom datasets stay visible in every city.
+
+Nothing in the comparison engine is city-aware — Overpass bounding boxes still
+come from each dataset's own official data extent.
+
+## Setting it up for your own city
+
+You do not need to fork this repo. A **city pack** is a single JSON file — one
+city plus its datasets — and there are three ways to use one, in increasing
+order of effort:
+
+1. **Import it in the app.** Host the JSON anywhere CORS-enabled and paste its
+   URL into *Add source → Import a city*, or open
+   `?pack=https://example.org/my-city.json` to load it for one visit and be
+   offered the chance to keep it. Nothing is forked, built, or reviewed.
+2. **Open a pull request** against [`presets/`](presets/) so your city ships
+   with the app. This is what a source needs when its server refuses direct
+   browser requests: shipped packs get their data cached at build time and
+   loaded same-origin.
+3. **Fork and self-host** only if you want your own branding or domain — the
+   engine itself is city-agnostic and needs no code changes.
+
+See [`presets/README.md`](presets/README.md) for the pack format and the
+licence checks expected of any source.
+
 ## Adding datasets
 
 Two tiers:
 
-- **Presets** live in `src/presets.ts`, are read-only in the app, and are the
-  curated Karlsruhe set. Add or change one via a **pull request** — that is the
-  intended contribution path.
+- **Presets** are shipped **city packs** in [`presets/`](presets/) — one JSON
+  file per city, read-only in the app. Karlsruhe is the pack this project
+  started with; any city can be added the same way. Add or change one via a
+  **pull request**; see [`presets/README.md`](presets/README.md) for the format.
+  A shipped pack also gets its official data cached at build time, which is how
+  sources without CORS headers stay usable.
 - **Custom** mappings are added in the app (label + GeoJSON URL + optional
   source URL + Overpass query). They are saved to `localStorage`, or you can "Copy
   share link" to share a mapping via URL without saving anything.
@@ -129,8 +162,12 @@ src/
   matching.ts            one-to-one spatial assignment engine
   tag-matching.ts        tag-mapping evaluation and diffing
   dataset-definition.ts  validation for stored/shared definitions
+  city-pack.ts           validation for city packs (city + datasets)
+  city-selection.ts      selected city, ?city= URL, per-city dataset view
+  pack-fetch.ts          fetching and size-capping remote city packs
+  packs.ts               imported pack storage and the merged catalog
   dataset-codec.ts       share-link encode/decode
-  dataset-constraints.ts dataset payload limits
+  constraints.ts         dataset and city-pack payload limits
   custom-dataset.ts      custom dataset definition helpers
   datasets.ts            custom storage + share links + merged registry
   editors.ts             tag-mapping editors
@@ -143,6 +180,9 @@ src/
   popups.ts              map popup content
   map.ts, map-layers.ts  MapLibre state and layer rendering
   i18n.ts                English/German strings
+  presets.ts             shipped city packs, validated at load
+presets/
+  <city>.json            one shipped city pack per file
 scripts/
   fetch-presets.ts       validated build-time preset cache
 tests/

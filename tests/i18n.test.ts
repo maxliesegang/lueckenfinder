@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { formatNumber, setLanguage, t, translateMessage } from "../src/i18n";
+import * as packErrors from "../src/pack-errors";
 
 test("translations interpolate variables in English and German", () => {
   setLanguage("en");
@@ -30,6 +31,27 @@ test("numbers and known domain messages follow the selected language", () => {
   assert.equal(
     translateMessage("Invalid GeoJSON geometry at feature 3"),
     "Die amtlichen GeoJSON-Daten sind ungültig.",
+  );
+
+  setLanguage("en");
+});
+
+test("every pack failure message has a translation", () => {
+  setLanguage("de");
+  const messages = Object.values<unknown>(packErrors).filter(
+    (value) => typeof value === "string",
+  );
+  assert.ok(messages.length > 0);
+  for (const message of messages) {
+    assert.notEqual(
+      translateMessage(message),
+      message,
+      `untranslated pack message: ${message}`,
+    );
+  }
+  assert.equal(
+    translateMessage(packErrors.packRequestFailed(503)),
+    "Das Stadtpaket konnte nicht geladen werden (503).",
   );
 
   setLanguage("en");

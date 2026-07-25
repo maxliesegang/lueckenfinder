@@ -9,21 +9,22 @@ import {
 } from "react-map-gl/maplibre";
 import type { Language } from "../i18n";
 import {
+  cityViewState,
   clearResult,
   closeActivePopup,
   initializeMap,
-  MAP_INITIAL_VIEW_STATE,
   MAP_STYLE,
   renderResult,
   setLayerVisible,
 } from "../map";
 import maplibregl from "../maplibre";
 import { RESULT_BUCKET_IDS, type ResultBucketId } from "../result-buckets";
-import type { ConflationResult, Dataset } from "../types";
+import type { CityDefinition, ConflationResult, Dataset } from "../types";
 
 interface MapViewProps {
   result: ConflationResult | undefined;
   dataset: Dataset | undefined;
+  city: CityDefinition | undefined;
   resultVisibility: Record<ResultBucketId, boolean>;
   language: Language;
 }
@@ -33,8 +34,25 @@ interface MapViewProps {
  * an integration island driven by effects; result data and layer visibility
  * flow in as props.
  */
-export function MapView({ result, dataset, resultVisibility, language }: MapViewProps) {
+export function MapView({
+  result,
+  dataset,
+  city,
+  resultVisibility,
+  language,
+}: MapViewProps) {
   const mapRef = useRef<MapRef | null>(null);
+  // initialViewState only applies on mount, so the first city is captured once
+  // and later changes are flown to below.
+  const initialViewState = useRef(cityViewState(city)).current;
+  const renderedCityId = useRef(city?.id);
+
+  useEffect(() => {
+    const map = currentMap(mapRef.current);
+    if (!map || !city || city.id === renderedCityId.current) return;
+    renderedCityId.current = city.id;
+    map.flyTo(cityViewState(city));
+  }, [city]);
 
   useEffect(() => {
     const map = currentMap(mapRef.current);
@@ -62,7 +80,7 @@ export function MapView({ result, dataset, resultVisibility, language }: MapView
       ref={mapRef}
       mapLib={maplibregl}
       mapStyle={MAP_STYLE}
-      initialViewState={MAP_INITIAL_VIEW_STATE}
+      initialViewState={initialViewState}
       onLoad={(event) => initializeMap(event.target)}
     >
       <NavigationControl position="bottom-right" visualizePitch={true} />

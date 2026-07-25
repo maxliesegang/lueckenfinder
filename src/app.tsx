@@ -1,30 +1,53 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ControlPanel } from "./components/map-overlay/control-panel";
 import { LegendPanel } from "./components/map-overlay/legend-panel";
 import { StatusToast } from "./components/map-overlay/status-toast";
 import { Toolbar } from "./components/map-overlay/toolbar";
 import { MapView } from "./components/map-view";
-import { isValidMatchRadiusM } from "./dataset-constraints";
+import { isValidMatchRadiusM } from "./constraints";
 import { encodeShareLink } from "./datasets";
 import { friendlyError } from "./error-message";
+import { useCitySelection } from "./hooks/use-city-selection";
 import { useComparison } from "./hooks/use-comparison";
 import { useDatasetSelection } from "./hooks/use-dataset-selection";
 import { useDatasets } from "./hooks/use-datasets";
 import { useI18n } from "./hooks/use-i18n";
+import { usePackLibrary } from "./hooks/use-pack-library";
 import { useStatus } from "./hooks/use-status";
 import { useTheme } from "./hooks/use-theme";
+import { buildCatalog, type PackLibrary } from "./packs";
 import {
   createResultBucketVisibility,
   type ResultBucketId,
   type ResultBucketVisibility,
 } from "./result-buckets";
-import type { DatasetDefinition } from "./types";
+import type { CityPack, DatasetDefinition } from "./types";
 
 export function App() {
   const { t, language, setLanguage } = useI18n();
   const { themePreference, setThemePreference } = useTheme();
-  const { datasets, addCustomDataset, removeCustomDataset } = useDatasets();
+  const {
+    datasets: storedDatasets,
+    addCustomDataset,
+    removeCustomDataset,
+  } = useDatasets();
   const status = useStatus();
+  const { setStatus, setStatusTimed } = status;
+
+  const reportError = useCallback(
+    (error: unknown) => {
+      setStatus(t("status.error", { message: friendlyError(error) }));
+    },
+    [setStatus, t],
+  );
+
+  const packLibrary = usePackLibrary(reportError);
+
+  const { cities, datasets } = useMemo(
+    () => buildCatalog(storedDatasets, packLibrary.activePacks),
+    [storedDatasets, packLibrary.activePacks],
+  );
+  const { selectedCity, cityDatasets, selectCity } = useCitySelection(datasets, cities);
   const comparison = useComparison(status);
   const {
     result: comparisonResult,
@@ -32,7 +55,6 @@ export function App() {
     run: runDatasetComparison,
     clear: clearComparison,
   } = comparison;
-  const { setStatus, setStatusTimed } = status;
 
   const [resultVisibility, setResultVisibility] = useState<ResultBucketVisibility>(
     createResultBucketVisibility,
@@ -57,7 +79,7 @@ export function App() {
     selectDataset,
     selectDatasetEntry,
     selectFirstAvailableDataset,
-  } = useDatasetSelection(datasets, resetSelectionState);
+  } = useDatasetSelection(cityDatasets, resetSelectionState);
 
   const runComparison = useCallback(() => {
     if (!selectedDataset) return;
@@ -92,11 +114,11 @@ export function App() {
         selectDatasetEntry(savedDataset);
         return true;
       } catch (error) {
-        setStatus(t("status.error", { message: friendlyError(error) }));
+        reportError(error);
         return false;
       }
     },
-    [addCustomDataset, selectDatasetEntry, setStatus, t],
+    [addCustomDataset, reportError, selectDatasetEntry],
   );
 
   const shareDatasetSource = useCallback(
@@ -108,10 +130,10 @@ export function App() {
         await navigator.clipboard.writeText(encodeShareLink(definition));
         setStatusTimed(t("status.shareCopied"));
       } catch (error) {
-        setStatus(t("status.error", { message: friendlyError(error) }));
+        reportError(error);
       }
     },
-    [setStatus, setStatusTimed, t],
+    [reportError, setStatusTimed, t],
   );
 
   const removeSelectedCustomDataset = useCallback(() => {
@@ -119,6 +141,51 @@ export function App() {
     removeCustomDataset(selectedDataset.id);
     selectFirstAvailableDataset(selectedDataset.id);
   }, [removeCustomDataset, selectFirstAvailableDataset, selectedDataset]);
+
+  // Adding a city switches to it: the user just asked for that place, and
+  // landing on the old city with an unexplained new entry reads as a no-op.
+  const handlePackAdded = useCallback(
+    (pack: CityPack) => {
+      selectCity(pack.city.id);
+      setStatusTimed(
+        t("pack.imported", { city: pack.city.name, count: pack.datasets.length }),
+      );
+    },
+    [selectCity, setStatusTimed, t],
+  );
+
+  /** The pack library the UI sees: storage actions plus their status reporting. */
+  const reportingPackLibrary = useMemo<PackLibrary>(
+    () => ({
+      ...packLibrary,
+      importPack: async (url) => {
+        try {
+          const pack = await packLibrary.importPack(url);
+          handlePackAdded(pack);
+          return pack;
+        } catch (error) {
+          reportError(error);
+          throw error;
+        }
+      },
+      keepSessionPack: () => {
+        const pack = packLibrary.sessionPack;
+        if (!pack) return;
+        try {
+          packLibrary.keepSessionPack();
+          handlePackAdded(pack);
+        } catch (error) {
+          reportError(error);
+        }
+      },
+      removePack: (cityId) => {
+        const pack = packLibrary.activePacks.find((entry) => entry.city.id === cityId);
+        packLibrary.removePack(cityId);
+        if (pack) setStatusTimed(t("pack.removed", { city: pack.city.name }));
+      },
+    }),
+    [handlePackAdded, packLibrary, reportError, setStatusTimed, t],
+  );
 
   return (
     <>
@@ -129,6 +196,7 @@ export function App() {
         <MapView
           result={comparisonResult}
           dataset={selectedDataset}
+          city={selectedCity}
           resultVisibility={resultVisibility}
           language={language}
         />
@@ -136,7 +204,10 @@ export function App() {
         <div className="overlay-layer">
           <div className="overlay-slot--top-left">
             <ControlPanel
-              datasets={datasets}
+              datasets={cityDatasets}
+              cities={cities}
+              selectedCity={selectedCity}
+              onSelectCity={selectCity}
               selectedDataset={selectedDataset}
               selectedDatasetId={selectedDatasetId}
               onSelectDataset={selectDataset}
@@ -145,6 +216,7 @@ export function App() {
               onSaveDatasetSource={saveDatasetSource}
               onShareDatasetSource={(definition) => void shareDatasetSource(definition)}
               onRemoveSelectedCustomDataset={removeSelectedCustomDataset}
+              packLibrary={reportingPackLibrary}
             />
           </div>
 

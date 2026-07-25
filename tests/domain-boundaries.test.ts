@@ -10,7 +10,7 @@ import {
 } from "../src/datasets";
 import { loadOfficial, parseOfficialGeoJson, presetCacheUrl } from "../src/official";
 import { parseOverpassResponse, runOverpass } from "../src/overpass";
-import { PRESETS } from "../src/presets";
+import { PRESET_DATASETS } from "../src/presets";
 import type { Dataset, DatasetDefinition } from "../src/types";
 
 const definition: DatasetDefinition = {
@@ -248,8 +248,11 @@ test("non-point GeoJSON uses a stable bounding-box center", () => {
 });
 
 test("preset definitions are valid and have unique IDs", () => {
-  assert.equal(new Set(PRESETS.map((preset) => preset.id)).size, PRESETS.length);
-  for (const { source: _source, ...definition } of PRESETS) {
+  assert.equal(
+    new Set(PRESET_DATASETS.map((preset) => preset.id)).size,
+    PRESET_DATASETS.length,
+  );
+  for (const { source: _source, cityId: _cityId, ...definition } of PRESET_DATASETS) {
     assert.deepEqual(parseDatasetDefinition(definition), definition);
   }
 });

@@ -1,5 +1,14 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
+import {
+  PACK_CITY_RESERVED,
+  PACK_DATASET_RESERVED,
+  PACK_EMPTY,
+  PACK_INVALID,
+  PACK_LIMIT_REACHED,
+  PACK_TOO_LARGE,
+  PACK_URL_INVALID,
+} from "./pack-errors";
 
 export const SUPPORTED_LANGUAGES = ["en", "de"] as const;
 
@@ -18,13 +27,36 @@ const en = {
   "theme.system": "System",
   "theme.light": "Light",
   "theme.dark": "Dark",
+  "city.label": "City",
+  "city.selectAria": "Select city",
   "dataset.heading": "Dataset",
   "dataset.filter": "Filter…",
   "dataset.filterAria": "Filter datasets",
   "dataset.selectAria": "Select dataset",
   "dataset.empty": "No datasets match.",
   "dataset.customBadge": "custom",
+  "dataset.importedBadge": "imported",
   "dataset.sourceLink": "Open data source",
+  "pack.heading": "Import a city",
+  "pack.explainer":
+    "Load a city pack — one city and its datasets — from a URL. The file must be reachable from your browser (CORS).",
+  "pack.url": "City pack URL",
+  "pack.import": "Import",
+  "pack.importing": "Importing…",
+  "pack.imported": "Imported {{city}} ({{count}} datasets).",
+  "pack.remove": "Remove city",
+  "pack.removed": "Removed {{city}}.",
+  "pack.importedHeading": "Imported cities",
+  "pack.sessionBadge": "from link",
+  "pack.keepSession": "Keep this city",
+  "error.packInvalid": "That file is not a valid city pack.",
+  "error.packTooLarge": "That city pack is too large.",
+  "error.packUrl": "Enter an http(s) URL for the city pack.",
+  "error.packCityReserved": "That city already ships with the app.",
+  "error.packDatasetReserved": "That pack reuses a dataset ID that ships with the app.",
+  "error.packLimit": "You have imported the maximum number of cities.",
+  "error.packEmpty": "That city pack contains no datasets.",
+  "error.packRequest": "The city pack could not be loaded ({{status}}).",
   "legend.heading": "Results",
   "legend.total": "{{count}} features",
   "legend.showAll": "Show all",
@@ -147,12 +179,36 @@ const de: Record<TranslationKey, string> = {
   "theme.system": "System",
   "theme.light": "Hell",
   "theme.dark": "Dunkel",
+  "city.label": "Stadt",
+  "city.selectAria": "Stadt auswählen",
   "dataset.heading": "Datensatz",
   "dataset.filter": "Filtern…",
   "dataset.filterAria": "Datensätze filtern",
   "dataset.selectAria": "Datensatz auswählen",
   "dataset.empty": "Keine passenden Datensätze.",
   "dataset.customBadge": "eigen",
+  "dataset.importedBadge": "importiert",
+  "pack.heading": "Stadt importieren",
+  "pack.explainer":
+    "Ein Stadtpaket – eine Stadt mit ihren Datensätzen – über eine URL laden. Die Datei muss aus dem Browser abrufbar sein (CORS).",
+  "pack.url": "URL des Stadtpakets",
+  "pack.import": "Importieren",
+  "pack.importing": "Wird importiert…",
+  "pack.imported": "{{city}} importiert ({{count}} Datensätze).",
+  "pack.remove": "Stadt entfernen",
+  "pack.removed": "{{city}} entfernt.",
+  "pack.importedHeading": "Importierte Städte",
+  "pack.sessionBadge": "aus Link",
+  "pack.keepSession": "Stadt behalten",
+  "error.packInvalid": "Diese Datei ist kein gültiges Stadtpaket.",
+  "error.packTooLarge": "Dieses Stadtpaket ist zu groß.",
+  "error.packUrl": "Bitte eine http(s)-URL für das Stadtpaket angeben.",
+  "error.packCityReserved": "Diese Stadt ist bereits in der App enthalten.",
+  "error.packDatasetReserved":
+    "Dieses Paket verwendet eine Datensatz-ID, die bereits in der App enthalten ist.",
+  "error.packLimit": "Die maximale Anzahl importierter Städte ist erreicht.",
+  "error.packEmpty": "Dieses Stadtpaket enthält keine Datensätze.",
+  "error.packRequest": "Das Stadtpaket konnte nicht geladen werden ({{status}}).",
   "dataset.sourceLink": "Datenquelle öffnen",
   "legend.heading": "Ergebnisse",
   "legend.total": "{{count}} Objekte",
@@ -279,6 +335,13 @@ const TRANSLATED_MESSAGES: Partial<Record<string, TranslationKey>> = {
   "Overpass request timed out": "error.overpassTimeout",
   "Invalid Overpass JSON response": "error.invalidOsmData",
   "Invalid dataset definition": "error.invalidDataset",
+  [PACK_INVALID]: "error.packInvalid",
+  [PACK_TOO_LARGE]: "error.packTooLarge",
+  [PACK_URL_INVALID]: "error.packUrl",
+  [PACK_EMPTY]: "error.packEmpty",
+  [PACK_CITY_RESERVED]: "error.packCityReserved",
+  [PACK_DATASET_RESERVED]: "error.packDatasetReserved",
+  [PACK_LIMIT_REACHED]: "error.packLimit",
   "Official data is not a GeoJSON FeatureCollection": "error.invalidOfficialData",
   "GeoJSON FeatureCollection has no features array": "error.invalidOfficialData",
 };
@@ -340,6 +403,8 @@ export function translateMessage(message: string): string {
   if (/^Invalid (Overpass|WGS84 coordinate at Overpass)/.test(message)) {
     return t("error.invalidOsmData");
   }
+  const packStatus = /^City pack request failed with (.+)\.$/.exec(message);
+  if (packStatus) return t("error.packRequest", { status: packStatus[1] });
   const overpassStatus = /^Overpass returned (.+)$/.exec(message);
   return overpassStatus
     ? t("error.overpassReturned", { status: overpassStatus[1] })

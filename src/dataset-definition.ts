@@ -1,7 +1,6 @@
 import type { DatasetDefinition, PropertyTagMapping, PropertyTagRule } from "./types";
-import { isRecord } from "./validation";
+import { httpUrl, isRecord, nonEmptyString, safeId } from "./validation";
 
-const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const BBOX_TOKEN = "{{bbox}}";
 
 /**
@@ -11,7 +10,7 @@ const BBOX_TOKEN = "{{bbox}}";
 export function parseDatasetDefinition(value: unknown): DatasetDefinition | null {
   if (!isRecord(value)) return null;
 
-  const id = nonEmptyString(value.id);
+  const id = safeId(value.id);
   const label = nonEmptyString(value.label);
   const geojsonUrl = httpUrl(value.geojsonUrl);
   const overpassQuery = bboxQuery(value.overpassQuery);
@@ -19,7 +18,6 @@ export function parseDatasetDefinition(value: unknown): DatasetDefinition | null
 
   if (
     id === null ||
-    !SAFE_ID.test(id) ||
     label === null ||
     geojsonUrl === null ||
     overpassQuery === null ||
@@ -162,21 +160,4 @@ function hasCaptureGroup(pattern: string): boolean {
 function bboxQuery(value: unknown): string | null {
   const query = nonEmptyString(value);
   return query?.includes(BBOX_TOKEN) ? query : null;
-}
-
-function httpUrl(value: unknown): string | null {
-  const text = nonEmptyString(value);
-  if (text === null) return null;
-  try {
-    const url = new URL(text);
-    return url.protocol === "http:" || url.protocol === "https:" ? text : null;
-  } catch {
-    return null;
-  }
-}
-
-function nonEmptyString(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : null;
 }

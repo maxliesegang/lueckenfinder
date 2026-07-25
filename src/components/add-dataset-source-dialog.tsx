@@ -7,19 +7,26 @@ import {
   useDialog,
 } from "@kern-ux-annex/kern-react-kit";
 import { useI18n } from "../hooks/use-i18n";
+import type { PackLibrary } from "../packs";
 import type { DatasetDefinition } from "../types";
+import { CityPackForm } from "./city-pack-form";
 import { DatasetSourceForm } from "./dataset-source-form";
 
 const ADD_DATASET_SOURCE_DIALOG_ID = "add-dataset-source-dialog";
 
-interface AddDatasetSourceDialogProps {
+interface DatasetSourceFormProps {
   onSaveDefinition: (definition: DatasetDefinition) => boolean;
   onShareDefinition: (definition: DatasetDefinition) => void;
+}
+
+interface AddDatasetSourceDialogProps extends DatasetSourceFormProps {
+  packLibrary: PackLibrary;
 }
 
 export function AddDatasetSourceDialog({
   onSaveDefinition,
   onShareDefinition,
+  packLibrary,
 }: AddDatasetSourceDialogProps) {
   const { t } = useI18n();
 
@@ -31,6 +38,8 @@ export function AddDatasetSourceDialog({
       <KernDialogModal aria-labelledby={`${ADD_DATASET_SOURCE_DIALOG_ID}-title`}>
         <KernDialogHeader dialogTitle={t("controls.addSource")} showCloseButton />
         <KernDialogBody>
+          <CityPackForm packLibrary={packLibrary} />
+          <hr className="dialog-section-divider" />
           <DatasetSourceDialogForm
             onSaveDefinition={onSaveDefinition}
             onShareDefinition={onShareDefinition}
@@ -44,7 +53,7 @@ export function AddDatasetSourceDialog({
 function DatasetSourceDialogForm({
   onSaveDefinition,
   onShareDefinition,
-}: AddDatasetSourceDialogProps) {
+}: DatasetSourceFormProps) {
   const { closeDialog, isOpen } = useDialog();
 
   function handleSave(definition: DatasetDefinition): boolean {

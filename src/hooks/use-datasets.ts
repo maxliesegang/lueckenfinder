@@ -6,7 +6,7 @@ import {
 } from "../datasets";
 import type { Dataset, DatasetDefinition } from "../types";
 
-export interface DatasetCatalog {
+export interface DatasetStore {
   datasets: Dataset[];
   addCustomDataset: (definition: DatasetDefinition) => Dataset;
   removeCustomDataset: (datasetId: string) => void;
@@ -16,7 +16,7 @@ export interface DatasetCatalog {
  * Reactive view over presets, stored custom datasets, and any shared dataset in
  * the URL hash. Mutations write through `datasets.ts` and refresh the snapshot.
  */
-export function useDatasets(): DatasetCatalog {
+export function useDatasets(): DatasetStore {
   const [datasets, setDatasets] = useState<Dataset[]>(allDatasets);
 
   const addCustomDataset = useCallback((definition: DatasetDefinition) => {

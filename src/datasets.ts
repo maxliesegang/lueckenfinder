@@ -5,11 +5,10 @@ import {
   encodeStoragePayload,
 } from "./dataset-codec";
 import { parseDatasetDefinition } from "./dataset-definition";
-import { PRESETS } from "./presets";
+import { PRESET_DATASET_IDS, PRESET_DATASETS } from "./presets";
 import type { Dataset, DatasetDefinition } from "./types";
 
 const STORAGE_KEY = "lueckenfinder:datasets";
-const PRESET_IDS = new Set(PRESETS.map((preset) => preset.id));
 
 // ---- Custom datasets (the ONLY thing we persist) --------------------------
 
@@ -18,7 +17,7 @@ function loadCustomDatasets(): Dataset[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     return decodeStoragePayload(raw)
-      .filter((definition) => !PRESET_IDS.has(definition.id))
+      .filter((definition) => !PRESET_DATASET_IDS.has(definition.id))
       .map((definition) => ({ ...definition, source: "custom" }));
   } catch {
     return [];
@@ -32,7 +31,7 @@ function saveCustomDatasets(datasets: Dataset[]): void {
 export function addCustomDataset(definitionInput: DatasetDefinition): Dataset {
   const definition = parseDatasetDefinition(definitionInput);
   if (!definition) throw new TypeError("Invalid dataset definition");
-  if (PRESET_IDS.has(definition.id)) {
+  if (PRESET_DATASET_IDS.has(definition.id)) {
     throw new Error(`Dataset ID "${definition.id}" is reserved by a preset`);
   }
   const customDataset: Dataset = { ...definition, source: "custom" };
@@ -57,7 +56,7 @@ export function removeCustomDataset(datasetId: string): void {
 export function encodeShareLink(definitionInput: DatasetDefinition): string {
   const definition = parseDatasetDefinition(definitionInput);
   if (!definition) throw new TypeError("Invalid dataset definition");
-  if (PRESET_IDS.has(definition.id)) {
+  if (PRESET_DATASET_IDS.has(definition.id)) {
     throw new Error(`Dataset ID "${definition.id}" is reserved by a preset`);
   }
   const url = new URL(window.location.href);
@@ -69,7 +68,7 @@ export function decodeShareLink(): Dataset | null {
   const match = /[#&]d=([^&]+)/.exec(window.location.hash);
   if (!match) return null;
   const definition = decodeSharePayload(match[1]);
-  if (!definition || PRESET_IDS.has(definition.id)) return null;
+  if (!definition || PRESET_DATASET_IDS.has(definition.id)) return null;
   return { ...definition, source: "custom" };
 }
 
@@ -82,11 +81,7 @@ export function allDatasets(): Dataset[] {
     sharedDataset && !customDatasets.some((dataset) => dataset.id === sharedDataset.id)
       ? [sharedDataset]
       : [];
-  return [...PRESETS, ...customDatasets, ...sharedDatasets];
-}
-
-export function getDataset(id: string): Dataset | undefined {
-  return allDatasets().find((dataset) => dataset.id === id);
+  return [...PRESET_DATASETS, ...customDatasets, ...sharedDatasets];
 }
 
 export function filterAndSortDatasets(

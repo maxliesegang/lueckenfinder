@@ -29,13 +29,33 @@ import {
   type ResultBucketId,
   type ResultBucketVisibility,
 } from "./result-buckets";
-import type { ConflationResult, Dataset, DatasetPoint, PointMatch } from "./types";
+import type {
+  CityDefinition,
+  ConflationResult,
+  Dataset,
+  DatasetPoint,
+  PointMatch,
+} from "./types";
 
-export const MAP_INITIAL_VIEW_STATE = {
+export interface MapViewState {
+  longitude: number;
+  latitude: number;
+  zoom: number;
+}
+
+/** Fallback view used only when no city pack is available. */
+export const DEFAULT_MAP_VIEW_STATE: MapViewState = {
   longitude: 8.4037,
   latitude: 49.0069,
   zoom: 12,
-} as const;
+};
+
+/** The initial map view for a city, or the fallback when there is none. */
+export function cityViewState(city: CityDefinition | undefined): MapViewState {
+  if (!city) return { ...DEFAULT_MAP_VIEW_STATE };
+  const [longitude, latitude] = city.center;
+  return { longitude, latitude, zoom: city.zoom };
+}
 
 export const MAP_STYLE: maplibregl.StyleSpecification = {
   version: 8,

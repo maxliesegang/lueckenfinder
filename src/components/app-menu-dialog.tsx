@@ -12,7 +12,7 @@ import {
   KernSelect,
   KernText,
 } from "@kern-ux-annex/kern-react-kit";
-import { MAX_MATCH_RADIUS_M, MIN_MATCH_RADIUS_M } from "../dataset-constraints";
+import { MAX_MATCH_RADIUS_M, MIN_MATCH_RADIUS_M } from "../constraints";
 import { useI18n } from "../hooks/use-i18n";
 import type { Language } from "../i18n";
 import { parseThemePreference, type ThemePreference } from "../theme";

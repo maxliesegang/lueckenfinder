@@ -1,7 +1,9 @@
-import { KernBadge, KernButton } from "@kern-ux-annex/kern-react-kit";
+import { KernBadge, KernButton, KernSelect } from "@kern-ux-annex/kern-react-kit";
 import { useState } from "react";
+import { datasetBadgeKey } from "../../dataset-badges";
 import { useI18n } from "../../hooks/use-i18n";
-import type { Dataset, DatasetDefinition } from "../../types";
+import type { PackLibrary } from "../../packs";
+import type { CityDefinition, Dataset, DatasetDefinition } from "../../types";
 import { AddDatasetSourceDialog } from "../add-dataset-source-dialog";
 import { DatasetList } from "../dataset-list";
 import { DatasetSourceInfo } from "../dataset-source-info";
@@ -9,6 +11,9 @@ import "./control-panel.css";
 
 interface ControlPanelProps {
   datasets: Dataset[];
+  cities: readonly CityDefinition[];
+  selectedCity: CityDefinition | undefined;
+  onSelectCity: (cityId: string) => void;
   selectedDataset: Dataset | undefined;
   selectedDatasetId: string | undefined;
   onSelectDataset: (datasetId: string) => void;
@@ -17,6 +22,7 @@ interface ControlPanelProps {
   onSaveDatasetSource: (definition: DatasetDefinition) => boolean;
   onShareDatasetSource: (definition: DatasetDefinition) => void;
   onRemoveSelectedCustomDataset: () => void;
+  packLibrary: PackLibrary;
 }
 
 /**
@@ -25,6 +31,9 @@ interface ControlPanelProps {
  */
 export function ControlPanel({
   datasets,
+  cities,
+  selectedCity,
+  onSelectCity,
   selectedDataset,
   selectedDatasetId,
   onSelectDataset,
@@ -33,12 +42,14 @@ export function ControlPanel({
   onSaveDatasetSource,
   onShareDatasetSource,
   onRemoveSelectedCustomDataset,
+  packLibrary,
 }: ControlPanelProps) {
   const { t } = useI18n();
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [datasetSearchQuery, setDatasetSearchQuery] = useState("");
 
   const selectedDatasetIsCustom = selectedDataset?.source === "custom";
+  const selectedBadgeKey = datasetBadgeKey(selectedDataset?.source);
 
   return (
     <section className="overlay-panel control-panel" aria-label={t("dataset.heading")}>
@@ -57,11 +68,26 @@ export function ControlPanel({
 
       {!panelCollapsed && (
         <div className="overlay-panel__body overlay-panel__body--scroll">
+          <KernSelect
+            id="citySelect"
+            label={t("city.label")}
+            aria-label={t("city.selectAria")}
+            required
+            value={selectedCity?.id ?? ""}
+            onChange={(event) => onSelectCity(event.target.value)}
+          >
+            {cities.map((city) => (
+              <option key={city.id} value={city.id}>
+                {city.name}
+              </option>
+            ))}
+          </KernSelect>
+
           <div className="control-panel__dataset">
             <div className="control-panel__dataset-label">
               <span className="section-label">{t("dataset.heading")}</span>
-              {selectedDatasetIsCustom && (
-                <KernBadge variant="info" label={t("dataset.customBadge")} />
+              {selectedBadgeKey && (
+                <KernBadge variant="info" label={t(selectedBadgeKey)} />
               )}
             </div>
             <div className="kern-form-input control-panel__search">
@@ -104,6 +130,7 @@ export function ControlPanel({
           <AddDatasetSourceDialog
             onSaveDefinition={onSaveDatasetSource}
             onShareDefinition={onShareDatasetSource}
+            packLibrary={packLibrary}
           />
           {selectedDatasetIsCustom && (
             <KernButton
