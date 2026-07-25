@@ -5,6 +5,7 @@ import {
   encodeStoragePayload,
 } from "./dataset-codec";
 import { parseDatasetDefinition } from "./dataset-definition";
+import { DATASET_INVALID } from "./errors";
 import { PRESET_DATASET_IDS, PRESET_DATASETS } from "./presets";
 import type { Dataset, DatasetDefinition } from "./types";
 
@@ -28,12 +29,22 @@ function saveCustomDatasets(datasets: Dataset[]): void {
   localStorage.setItem(STORAGE_KEY, encodeStoragePayload(datasets));
 }
 
-export function addCustomDataset(definitionInput: DatasetDefinition): Dataset {
-  const definition = parseDatasetDefinition(definitionInput);
-  if (!definition) throw new TypeError("Invalid dataset definition");
+/**
+ * Validate a would-be custom dataset: it must be well-formed and must not
+ * reuse a shipped preset ID, so runtime additions can never shadow curated,
+ * reviewed data.
+ */
+function parseCustomDefinition(input: DatasetDefinition): DatasetDefinition {
+  const definition = parseDatasetDefinition(input);
+  if (!definition) throw new TypeError(DATASET_INVALID);
   if (PRESET_DATASET_IDS.has(definition.id)) {
     throw new Error(`Dataset ID "${definition.id}" is reserved by a preset`);
   }
+  return definition;
+}
+
+export function addCustomDataset(definitionInput: DatasetDefinition): Dataset {
+  const definition = parseCustomDefinition(definitionInput);
   const customDataset: Dataset = { ...definition, source: "custom" };
   const customDatasets = loadCustomDatasets().filter(
     (dataset) => dataset.id !== customDataset.id,
@@ -54,11 +65,7 @@ export function removeCustomDataset(datasetId: string): void {
 // shared without being "saved" anywhere. #d=<base64url(json)>
 
 export function encodeShareLink(definitionInput: DatasetDefinition): string {
-  const definition = parseDatasetDefinition(definitionInput);
-  if (!definition) throw new TypeError("Invalid dataset definition");
-  if (PRESET_DATASET_IDS.has(definition.id)) {
-    throw new Error(`Dataset ID "${definition.id}" is reserved by a preset`);
-  }
+  const definition = parseCustomDefinition(definitionInput);
   const url = new URL(window.location.href);
   url.hash = `d=${encodeSharePayload(definition)}`;
   return url.toString();

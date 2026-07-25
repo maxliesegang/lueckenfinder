@@ -1,3 +1,8 @@
+import {
+  OFFICIAL_GEOJSON_UNAVAILABLE,
+  OFFICIAL_NO_FEATURES,
+  OFFICIAL_NOT_FEATURE_COLLECTION,
+} from "./errors";
 import type { Dataset, DatasetPoint } from "./types";
 import { isFiniteNumber, isRecord, isValidLat, isValidLon } from "./validation";
 
@@ -23,10 +28,7 @@ export async function loadOfficial(
   }
   const live = await tryLoadPoints(dataset.geojsonUrl, options.signal);
   if (!live) {
-    throw new Error(
-      "Could not load valid official GeoJSON. If this is a custom source, " +
-        "the server may not allow direct browser access (CORS).",
-    );
+    throw new Error(OFFICIAL_GEOJSON_UNAVAILABLE);
   }
   return live;
 }
@@ -53,10 +55,10 @@ async function tryLoadPoints(
 /** Validate GeoJSON and convert each non-empty feature to a representative point. */
 export function parseOfficialGeoJson(value: unknown): DatasetPoint[] {
   if (!isRecord(value) || value.type !== "FeatureCollection") {
-    throw new TypeError("Official data is not a GeoJSON FeatureCollection");
+    throw new TypeError(OFFICIAL_NOT_FEATURE_COLLECTION);
   }
   if (!Array.isArray(value.features)) {
-    throw new TypeError("GeoJSON FeatureCollection has no features array");
+    throw new TypeError(OFFICIAL_NO_FEATURES);
   }
 
   return value.features.flatMap((feature, index) => {

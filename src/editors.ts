@@ -1,3 +1,4 @@
+import { metersToDegrees } from "./geo";
 import { expectedTags } from "./tag-matching";
 import type { Dataset, DatasetPoint } from "./types";
 
@@ -39,8 +40,7 @@ export function josmAddNodeLink(point: DatasetPoint, dataset: Dataset): string {
 
 /** JOSM remote control: just zoom to the area so the mapper can survey. */
 export function josmZoomLink(point: DatasetPoint, radiusM = 60): string {
-  const dLat = radiusM / 111_320;
-  const dLon = radiusM / (111_320 * Math.cos((point.lat * Math.PI) / 180) || 1);
+  const { dLat, dLon } = metersToDegrees(radiusM, point.lat);
   const params = new URLSearchParams({
     left: String(point.lon - dLon),
     right: String(point.lon + dLon),

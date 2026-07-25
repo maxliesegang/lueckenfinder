@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { MATCH_RADIUS_ERROR } from "../src/constraints";
+import * as errors from "../src/errors";
 import { formatNumber, setLanguage, t, translateMessage } from "../src/i18n";
 import * as packErrors from "../src/pack-errors";
 
@@ -53,6 +55,24 @@ test("every pack failure message has a translation", () => {
     translateMessage(packErrors.packRequestFailed(503)),
     "Das Stadtpaket konnte nicht geladen werden (503).",
   );
+
+  setLanguage("en");
+});
+
+test("every shared failure message has a translation", () => {
+  setLanguage("de");
+  const messages = [
+    MATCH_RADIUS_ERROR,
+    ...Object.values<unknown>(errors).filter((value) => typeof value === "string"),
+  ];
+  assert.ok(messages.length > 0);
+  for (const message of messages) {
+    assert.notEqual(
+      translateMessage(message),
+      message,
+      `untranslated message: ${message}`,
+    );
+  }
 
   setLanguage("en");
 });

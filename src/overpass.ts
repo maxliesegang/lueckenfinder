@@ -1,13 +1,14 @@
+import { BBOX_TOKEN } from "./dataset-definition";
+import { OVERPASS_INVALID_RESPONSE, OVERPASS_TIMEOUT } from "./errors";
 import type { BBox } from "./geo";
 import type { DatasetPoint } from "./types";
-import { isRecord, isValidLat, isValidLon } from "./validation";
+import { isFiniteNumber, isRecord, isValidLat, isValidLon } from "./validation";
 
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://lz4.overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ];
-const BBOX_TOKEN = "{{bbox}}";
 const CLIENT_TIMEOUT_MS = 100_000;
 const SERVER_TIMEOUT_SECONDS = 90;
 
@@ -42,7 +43,9 @@ export async function runOverpass(
 
 function validateQuery(queryBody: string): void {
   if (!queryBody.includes(BBOX_TOKEN)) {
-    throw new TypeError('Overpass query must contain the literal "{{bbox}}" token');
+    throw new TypeError(
+      `Overpass query must contain the literal "${BBOX_TOKEN}" token`,
+    );
   }
 }
 
@@ -73,8 +76,7 @@ function createRequestSignal(options: OverpassOptions): {
   else options.signal?.addEventListener("abort", forwardAbort, { once: true });
 
   const timer = setTimeout(
-    () =>
-      controller.abort(new DOMException("Overpass request timed out", "TimeoutError")),
+    () => controller.abort(new DOMException(OVERPASS_TIMEOUT, "TimeoutError")),
     timeoutMs,
   );
 
@@ -140,13 +142,14 @@ function overpassErrorDetail(text: string, status: number): string {
 
 export function parseOverpassResponse(value: unknown): DatasetPoint[] {
   if (!isRecord(value) || !Array.isArray(value.elements)) {
-    throw new TypeError("Invalid Overpass JSON response");
+    throw new TypeError(OVERPASS_INVALID_RESPONSE);
   }
   return value.elements.flatMap((element, index) => {
     if (!isRecord(element) || !isElementType(element.type)) {
       throw new TypeError(`Invalid Overpass element at index ${index}`);
     }
-    if (!Number.isSafeInteger(element.id) || (element.id as number) <= 0) {
+    const id = element.id;
+    if (!isFiniteNumber(id) || !Number.isSafeInteger(id) || id <= 0) {
       throw new TypeError(`Invalid Overpass element ID at index ${index}`);
     }
     const props = parseTags(element.tags, index);
@@ -157,7 +160,7 @@ export function parseOverpassResponse(value: unknown): DatasetPoint[] {
         lon: position[0],
         lat: position[1],
         props,
-        osmRef: `${element.type}/${element.id as number}`,
+        osmRef: `${element.type}/${id}`,
       },
     ];
   });

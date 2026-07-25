@@ -7,6 +7,7 @@ import { MapView } from "./components/map-view";
 import { isValidMatchRadiusM } from "./constraints";
 import { encodeShareLink } from "./datasets";
 import { friendlyError } from "./error-message";
+import { CLIPBOARD_UNAVAILABLE } from "./errors";
 import { useCitySelection } from "./hooks/use-city-selection";
 import { useComparison } from "./hooks/use-comparison";
 import { useDatasetSelection } from "./hooks/use-dataset-selection";
@@ -125,7 +126,7 @@ export function App() {
     async (definition: DatasetDefinition) => {
       try {
         if (!navigator.clipboard) {
-          throw new Error("Clipboard access is not available in this browser.");
+          throw new Error(CLIPBOARD_UNAVAILABLE);
         }
         await navigator.clipboard.writeText(encodeShareLink(definition));
         setStatusTimed(t("status.shareCopied"));

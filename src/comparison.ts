@@ -4,7 +4,8 @@ import {
   MATCH_RADIUS_ERROR,
   MAX_MATCH_RADIUS_M,
 } from "./constraints";
-import { type BBox, bboxOfPoints, padBbox } from "./geo";
+import { BROAD_QUERY_FAILED, OFFICIAL_NO_POINTS } from "./errors";
+import { type BBox, bboxOfPoints, padBbox, pointInBbox } from "./geo";
 import { loadOfficial } from "./official";
 import { runOverpass } from "./overpass";
 import type { ConflationResult, Dataset, DatasetPoint } from "./types";
@@ -77,7 +78,7 @@ export async function compareDataset(
   onStage({ type: "official" });
   const official = await dependencies.loadOfficial(dataset, { signal });
   if (official.length === 0) {
-    throw new Error("Official dataset has no valid points.");
+    throw new Error(OFFICIAL_NO_POINTS);
   }
 
   const bbox = cache ? requestBbox(official) : resultBbox(official, matchRadiusM);
@@ -96,9 +97,7 @@ export async function compareDataset(
       });
     } catch (error) {
       if (signal?.aborted) throw error;
-      warnings.push(
-        "The relaxed OSM query failed, so some missing items may only need tags.",
-      );
+      warnings.push(BROAD_QUERY_FAILED);
     }
   }
 
@@ -134,16 +133,6 @@ function requestBbox(official: DatasetPoint[]): BBox {
 
 function resultBbox(official: DatasetPoint[], matchRadiusM: number): BBox {
   return padBbox(bboxOfPoints(official), matchRadiusM + 50);
-}
-
-function pointInBbox(point: DatasetPoint, bbox: BBox): boolean {
-  const [minLon, minLat, maxLon, maxLat] = bbox;
-  return (
-    point.lon >= minLon &&
-    point.lon <= maxLon &&
-    point.lat >= minLat &&
-    point.lat <= maxLat
-  );
 }
 
 function comparisonRequestKey(dataset: Dataset): string {

@@ -1,11 +1,10 @@
 import { KernButton } from "@kern-ux-annex/kern-react-kit";
 import { type FormEvent, useEffect, useRef } from "react";
 import { createCustomDatasetDefinition } from "../custom-dataset";
+import { BBOX_TOKEN } from "../dataset-definition";
 import { useI18n } from "../hooks/use-i18n";
 import type { DatasetDefinition } from "../types";
 import "./dataset-source-form.css";
-
-const BBOX_PLACEHOLDER = "{{bbox}}";
 
 interface DatasetSourceFormProps {
   open: boolean;
@@ -39,9 +38,9 @@ export function DatasetSourceForm({
     const overpassQueryInput = overpassQueryInputRef.current;
     if (!form || !overpassQueryInput) return null;
     overpassQueryInput.setCustomValidity(
-      overpassQueryInput.value.includes(BBOX_PLACEHOLDER)
+      overpassQueryInput.value.includes(BBOX_TOKEN)
         ? ""
-        : t("validation.bboxToken", { bboxToken: BBOX_PLACEHOLDER }),
+        : t("validation.bboxToken", { bboxToken: BBOX_TOKEN }),
     );
     if (!form.reportValidity()) return null;
     return createCustomDatasetDefinition({
@@ -128,7 +127,7 @@ export function DatasetSourceForm({
 
       <div className="kern-form-input dataset-source-form__field">
         <label className="kern-label" htmlFor="f-overpass">
-          {t("sourceForm.overpassQuery", { bboxToken: BBOX_PLACEHOLDER })}
+          {t("sourceForm.overpassQuery", { bboxToken: BBOX_TOKEN })}
         </label>
         <textarea
           id="f-overpass"

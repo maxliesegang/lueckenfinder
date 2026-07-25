@@ -25,7 +25,6 @@ import {
 import {
   createResultBucketVisibility,
   isResultBucketId,
-  RESULT_BUCKET_IDS,
   type ResultBucketId,
   type ResultBucketVisibility,
 } from "./result-buckets";
@@ -112,10 +111,7 @@ export function renderResult(
 ): void {
   const state = getMapState(map);
   state.pendingRender = { result, dataset };
-
-  for (const id of RESULT_BUCKET_IDS) {
-    state.visibility[id] = true;
-  }
+  state.visibility = createResultBucketVisibility();
   closeActivePopup(map);
 
   if (state.initialLoadComplete) {
@@ -153,11 +149,9 @@ export function clearResult(map: MlMap): void {
   state.renderVersion++;
   closeActivePopup(map);
 
-  for (const id of MAP_RESULT_BUCKET_ORDER) {
-    setTargets(map, state, id, []);
+  for (const descriptor of INTERACTIVE_MAP_LAYER_DESCRIPTORS) {
+    if (descriptor.targetId) setTargets(map, state, descriptor.targetId, []);
   }
-  setTargets(map, state, "matched-osm", []);
-  setTargets(map, state, "needs-tagging-osm", []);
   setGeoJsonSource(map, MATCH_LINES_LAYER.sourceId, EMPTY_FEATURE_COLLECTION);
   setGeoJsonSource(map, NEEDS_TAGGING_LINES_LAYER.sourceId, EMPTY_FEATURE_COLLECTION);
 }

@@ -352,9 +352,12 @@ function MappedTagsTable({
 function AttributeGapTable({
   gaps,
   valueLabel,
+  highlightExpected = false,
 }: {
   gaps: PointMatch["attributeGaps"];
   valueLabel: string;
+  /** Bold the expected value: it is the fix the popup asks the mapper to make. */
+  highlightExpected?: boolean;
 }) {
   if (gaps.length === 0) return null;
   return (
@@ -372,11 +375,7 @@ function AttributeGapTable({
             <td>{gap.key}</td>
             <td>{gap.osmValue ?? "—"}</td>
             <td>
-              {valueLabel === t("popup.expected") ? (
-                <strong>{gap.expected}</strong>
-              ) : (
-                gap.expected
-              )}
+              {highlightExpected ? <strong>{gap.expected}</strong> : gap.expected}
             </td>
           </tr>
         ))}
@@ -439,7 +438,11 @@ export function needsTaggingPopup(
       <PopupTitle title={pointTitle(pair.official) ?? pointTitle(pair.osm)} />
       {pair.osm.osmRef && <div className="osm-ref">{pair.osm.osmRef}</div>}
       <p className="hint">{t("popup.tagDifferencesHint")}</p>
-      <AttributeGapTable gaps={pair.attributeGaps} valueLabel={t("popup.expected")} />
+      <AttributeGapTable
+        gaps={pair.attributeGaps}
+        valueLabel={t("popup.expected")}
+        highlightExpected
+      />
       <MatchDetailSections pair={pair} selectedSide={selectedSide} />
       <OsmEditActions osm={pair.osm} />
     </div>

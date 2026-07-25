@@ -1,7 +1,12 @@
 import type { DatasetDefinition, PropertyTagMapping, PropertyTagRule } from "./types";
 import { httpUrl, isRecord, nonEmptyString, safeId } from "./validation";
 
-const BBOX_TOKEN = "{{bbox}}";
+/**
+ * Placeholder every Overpass query must contain. `overpass.ts` replaces it
+ * with the official data extent at query time; validators and form hints share
+ * this constant so the contract cannot drift between them.
+ */
+export const BBOX_TOKEN = "{{bbox}}";
 
 /**
  * Parse an untrusted value into a serializable dataset definition.

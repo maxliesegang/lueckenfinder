@@ -23,7 +23,8 @@ export interface Comparison {
  * summary render from `result`; status text flows through the status controller.
  */
 export function useComparison(status: StatusController): Comparison {
-  const cache = useRef(createComparisonRequestCache()).current;
+  // State (not a ref) so the cache is created exactly once; it never changes.
+  const [cache] = useState(createComparisonRequestCache);
   const activeRun = useRef<AbortController | undefined>(undefined);
   const [result, setResult] = useState<ConflationResult | undefined>(undefined);
   const [running, setRunning] = useState(false);

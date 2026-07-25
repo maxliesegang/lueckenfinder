@@ -13,7 +13,7 @@
 - `tests/*.test.ts` contains regression tests using Node's test runner through `tsx`. Prefer a test near the module or behavior being changed.
 - `presets/<city>.json` holds curated, read-only **city packs** (a city descriptor plus its dataset definitions); `src/presets.ts` imports and validates them. See `presets/README.md` for the format.
 - `src/city-pack.ts` owns validation for city definitions and packs, reusing `src/dataset-definition.ts` per dataset. `src/pack-fetch.ts` fetches and size-caps remote packs; `src/packs.ts` stores imported packs, merges the catalog, and defines the `PackLibrary` surface the UI consumes as a single prop.
-- `src/pack-errors.ts` holds every user-facing pack failure message. Throw those constants rather than literals — `src/i18n.ts` keys its translation table off them, so a literal would surface untranslated.
+- `src/pack-errors.ts` holds every user-facing pack failure message; `src/errors.ts` does the same for all other translated failure messages. Throw those constants rather than literals — `src/i18n.ts` keys its translation table off them, so a literal would surface untranslated.
 - `scripts/preset-cache.ts` holds the pure selection helpers for the cache script so they stay testable.
 - `scripts/fetch-presets.ts` validates and caches preset GeoJSON for production builds. Treat `public/presets-data/` as generated output.
 - `src/dataset-definition.ts` owns validation for stored and shared dataset definitions; `src/validation.ts` holds the shared runtime type guards used to validate external data (GeoJSON, Overpass, storage).

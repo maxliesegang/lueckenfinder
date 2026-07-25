@@ -1,5 +1,17 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
+import { MATCH_RADIUS_ERROR } from "./constraints";
+import {
+  BROAD_QUERY_FAILED,
+  CLIPBOARD_UNAVAILABLE,
+  DATASET_INVALID,
+  OFFICIAL_GEOJSON_UNAVAILABLE,
+  OFFICIAL_NO_FEATURES,
+  OFFICIAL_NO_POINTS,
+  OFFICIAL_NOT_FEATURE_COLLECTION,
+  OVERPASS_INVALID_RESPONSE,
+  OVERPASS_TIMEOUT,
+} from "./errors";
 import {
   PACK_CITY_RESERVED,
   PACK_DATASET_RESERVED,
@@ -325,16 +337,14 @@ const de: Record<TranslationKey, string> = {
 };
 
 const TRANSLATED_MESSAGES: Partial<Record<string, TranslationKey>> = {
-  "Clipboard access is not available in this browser.": "error.clipboard",
-  "Match radius must be between 1 and 2,000 metres.": "error.matchRadius",
-  "Official dataset has no valid points.": "error.noOfficialPoints",
-  "Could not load valid official GeoJSON. If this is a custom source, the server may not allow direct browser access (CORS).":
-    "error.officialGeojson",
-  "The relaxed OSM query failed, so some missing items may only need tags.":
-    "warning.relaxedQuery",
-  "Overpass request timed out": "error.overpassTimeout",
-  "Invalid Overpass JSON response": "error.invalidOsmData",
-  "Invalid dataset definition": "error.invalidDataset",
+  [CLIPBOARD_UNAVAILABLE]: "error.clipboard",
+  [MATCH_RADIUS_ERROR]: "error.matchRadius",
+  [OFFICIAL_NO_POINTS]: "error.noOfficialPoints",
+  [OFFICIAL_GEOJSON_UNAVAILABLE]: "error.officialGeojson",
+  [BROAD_QUERY_FAILED]: "warning.relaxedQuery",
+  [OVERPASS_TIMEOUT]: "error.overpassTimeout",
+  [OVERPASS_INVALID_RESPONSE]: "error.invalidOsmData",
+  [DATASET_INVALID]: "error.invalidDataset",
   [PACK_INVALID]: "error.packInvalid",
   [PACK_TOO_LARGE]: "error.packTooLarge",
   [PACK_URL_INVALID]: "error.packUrl",
@@ -342,8 +352,8 @@ const TRANSLATED_MESSAGES: Partial<Record<string, TranslationKey>> = {
   [PACK_CITY_RESERVED]: "error.packCityReserved",
   [PACK_DATASET_RESERVED]: "error.packDatasetReserved",
   [PACK_LIMIT_REACHED]: "error.packLimit",
-  "Official data is not a GeoJSON FeatureCollection": "error.invalidOfficialData",
-  "GeoJSON FeatureCollection has no features array": "error.invalidOfficialData",
+  [OFFICIAL_NOT_FEATURE_COLLECTION]: "error.invalidOfficialData",
+  [OFFICIAL_NO_FEATURES]: "error.invalidOfficialData",
 };
 
 export const resources: Record<

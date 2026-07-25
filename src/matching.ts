@@ -8,7 +8,7 @@ export interface Assignment {
   distanceM: number;
 }
 
-interface Candidate extends Assignment {}
+type Candidate = Assignment;
 
 interface ResidualEdge {
   to: number;

@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { bboxOfPoints, haversineMeters, metersToDegrees, padBbox } from "../src/geo";
+import {
+  bboxOfPoints,
+  haversineMeters,
+  metersToDegrees,
+  padBbox,
+  pointInBbox,
+} from "../src/geo";
 
 test("haversineMeters returns a known city-scale distance", () => {
   const distance = haversineMeters(8.4037, 49.0069, 8.4047, 49.0069);
@@ -24,4 +30,12 @@ test("padding and degree conversion validate their inputs", () => {
   assert.ok(padded[1] < 49);
   assert.ok(padded[2] > 9);
   assert.ok(padded[3] > 50);
+});
+
+test("pointInBbox includes edges and excludes points outside", () => {
+  const bbox: [number, number, number, number] = [8, 49, 9, 50];
+  assert.ok(pointInBbox({ lon: 8.5, lat: 49.5 }, bbox));
+  assert.ok(pointInBbox({ lon: 8, lat: 50 }, bbox));
+  assert.ok(!pointInBbox({ lon: 7.9, lat: 49.5 }, bbox));
+  assert.ok(!pointInBbox({ lon: 8.5, lat: 50.1 }, bbox));
 });

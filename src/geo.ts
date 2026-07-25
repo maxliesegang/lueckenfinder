@@ -54,6 +54,17 @@ export function padBbox(bbox: BBox, meters: number): BBox {
   return [minLon - dLon, minLat - dLat, maxLon + dLon, maxLat + dLat];
 }
 
+/** Whether a point lies inside a bounding box, edges included. */
+export function pointInBbox(point: { lon: number; lat: number }, bbox: BBox): boolean {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  return (
+    point.lon >= minLon &&
+    point.lon <= maxLon &&
+    point.lat >= minLat &&
+    point.lat <= maxLat
+  );
+}
+
 /** Metres -> degrees of latitude / longitude at a given latitude. */
 export function metersToDegrees(
   meters: number,
