@@ -4,7 +4,9 @@ import test from "node:test";
 import { parseCityPack } from "../src/city-pack";
 import { mergeOsmCriteria } from "../src/dataset-criteria";
 import { parseDatasetDefinition } from "../src/dataset-definition";
+import { matchesSelector, selectorFixedTags } from "../src/osm-selector";
 import { getTopicCriteria, OSM_TOPICS } from "../src/topics";
+import type { DatasetPoint } from "../src/types";
 
 const base = {
   id: "example",
@@ -12,6 +14,10 @@ const base = {
   geojsonUrl: "https://example.org/data.geojson",
   attribution: "Example",
 };
+
+function osm(props: Record<string, string>): DatasetPoint {
+  return { lon: 8, lat: 49, props, osmRef: "way/1" };
+}
 
 test("the shipped catalog loads and every topic states some criteria", () => {
   assert.ok(OSM_TOPICS.size > 0);
@@ -37,6 +43,48 @@ test("an unknown topic fails the parse rather than resolving to nothing", () => 
 
 test("a dataset with neither topic nor criteria has nothing to query", () => {
   assert.equal(parseDatasetDefinition(base), null);
+});
+
+/**
+ * A city's list of Parkhäuser is a list of built structures, but most of
+ * `amenity=parking` is street-side bays and surface lots — matching against all
+ * of it pairs a garage with whatever parking happens to be nearest. The strict
+ * half therefore asks only for the built subtypes, and the relaxed half keeps
+ * every off-street lot so a garage mapped without its subtype still surfaces as
+ * a tagging suggestion rather than a phantom gap.
+ */
+test("multi-storey car parks are structures, not any nearby parking", () => {
+  const definition = parseDatasetDefinition({
+    ...base,
+    topic: "multi-storey-car-park",
+  });
+  const strictSelector = definition?.osmSelector;
+  const broadSelector = definition?.broadSelector;
+  assert.ok(strictSelector);
+  assert.ok(broadSelector);
+
+  const strict = (props: Record<string, string>) =>
+    matchesSelector(strictSelector, osm(props));
+  const relaxed = (props: Record<string, string>) =>
+    matchesSelector(broadSelector, osm(props));
+
+  for (const parking of ["multi-storey", "underground", "rooftop"]) {
+    assert.ok(strict({ amenity: "parking", parking }), parking);
+  }
+  for (const parking of ["surface", "street_side", "lane", "on_kerb", "layby"]) {
+    assert.equal(strict({ amenity: "parking", parking }), false, parking);
+  }
+  // A subtype-less lot could be either, so only the relaxed half claims it.
+  assert.equal(strict({ amenity: "parking" }), false);
+  assert.ok(relaxed({ amenity: "parking" }));
+  assert.ok(relaxed({ amenity: "parking", parking: "surface" }));
+  // The bay outside the entrance must not be offered the garage's capacity.
+  assert.equal(relaxed({ amenity: "parking", parking: "street_side" }), false);
+
+  // The subtype varies across matches, so it is never an expectation.
+  assert.deepEqual(selectorFixedTags(strictSelector), {
+    amenity: "parking",
+  });
 });
 
 test("the dataset's own strict criteria replace the topic's whole slot", () => {

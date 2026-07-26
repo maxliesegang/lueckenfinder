@@ -84,11 +84,21 @@ Prefer fixing this in the selector where the tags actually distinguish the two
 populations — `exhaustive: false` is for when they do not. Note that narrowing a
 selector has its own cost: an object excluded by the strict criteria and carrying
 no *missing* tag cannot be rescued by the relaxed criteria either, so it is
-reported as missing from OSM although it is right there. That is why `car-park`
-still queries all of `amenity=parking`, why `playground` and `table-tennis` do
-not exclude `access` even though OSM holds plenty of private playgrounds and
-school tables, and why the Karlsruhe lists behind all three are marked
-non-exhaustive instead.
+reported as missing from OSM although it is right there. That is why `playground`
+and `table-tennis` do not exclude `access` even though OSM holds plenty of
+private playgrounds and school tables, and why the Karlsruhe lists behind them
+are marked non-exhaustive instead.
+
+Where narrowing is right, pair it with a relaxed selector that still covers the
+loosely tagged case. A city's list of Parkhäuser is a list of built structures,
+so `multi-storey-car-park` asks OSM only for `parking=multi-storey|underground|
+rooftop` rather than all of `amenity=parking`, which is mostly street-side bays
+and surface lots. Its `broadSelector` then keeps every off-street
+`amenity=parking` — including one carrying no `parking` subtype at all — as a
+relaxed candidate, so a garage mapped without its subtype comes back as a
+tagging suggestion instead of a phantom gap. The on-street values stay out of
+the relaxed half too, or the bay outside the garage entrance would be offered
+the garage's `capacity`.
 
 ## Topics
 

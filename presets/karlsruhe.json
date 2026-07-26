@@ -73,7 +73,7 @@
     },
     {
       "id": "ka-car-parks",
-      "topic": "car-park",
+      "topic": "multi-storey-car-park",
       "label": "Parkhäuser Karlsruhe",
       "exhaustive": false,
       "geojsonUrl": "https://mobil.trk.de/geoserver/TBA/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=TBA%3Aparkhaeuser&outputFormat=application%2Fjson&srsName=EPSG%3A4326&CQL_FILTER=gemeinde%3D%27Karlsruhe%27",

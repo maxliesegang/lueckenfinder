@@ -40,8 +40,15 @@
     },
     "broadSelector": { "tags": { "amenity": "parking_space" } }
   },
-  "car-park": {
-    "osmSelector": { "tags": { "amenity": "parking" } }
+  "multi-storey-car-park": {
+    "osmSelector": {
+      "tags": { "amenity": "parking" },
+      "anyValue": { "parking": ["multi-storey", "underground", "rooftop"] }
+    },
+    "broadSelector": {
+      "tags": { "amenity": "parking" },
+      "exclude": { "parking": ["street_side", "lane", "on_kerb", "layby"] }
+    }
   },
   "bicycle-parking": {
     "osmSelector": { "tags": { "amenity": "bicycle_parking" } }
