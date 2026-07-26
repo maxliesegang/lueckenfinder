@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type ComparisonStage,
   compareDataset,
-  createComparisonRequestCache,
+  createComparisonResponseCache,
 } from "../comparison";
 import { friendlyError } from "../error-message";
 import { formatNumber, t, translateMessage } from "../i18n";
@@ -24,7 +24,7 @@ export interface Comparison {
  */
 export function useComparison(status: StatusController): Comparison {
   // State (not a ref) so the cache is created exactly once; it never changes.
-  const [cache] = useState(createComparisonRequestCache);
+  const [cache] = useState(createComparisonResponseCache);
   const activeRun = useRef<AbortController | undefined>(undefined);
   const [result, setResult] = useState<ConflationResult | undefined>(undefined);
   const [running, setRunning] = useState(false);

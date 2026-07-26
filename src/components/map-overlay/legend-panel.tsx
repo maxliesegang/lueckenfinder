@@ -13,6 +13,8 @@ import "./legend-panel.css";
 interface LegendPanelProps {
   result: ConflationResult;
   resultVisibility: ResultBucketVisibility;
+  /** False when the official source is not a complete list of its kind. */
+  exhaustiveSource: boolean;
   onToggle: (id: ResultBucketId, visible: boolean) => void;
 }
 
@@ -20,11 +22,16 @@ interface LegendPanelProps {
  * Floating results legend. Doubles as the map key and a layer toggle: each row
  * shows a bucket's colour, count, and a checkbox that hides/shows its markers.
  */
-export function LegendPanel({ result, resultVisibility, onToggle }: LegendPanelProps) {
+export function LegendPanel({
+  result,
+  resultVisibility,
+  exhaustiveSource,
+  onToggle,
+}: LegendPanelProps) {
   const { t, formatNumber } = useI18n();
   const [legendCollapsed, setLegendCollapsed] = useState(false);
   const bodyId = useId();
-  const legendItems = summaryItems(result, resultVisibility);
+  const legendItems = summaryItems(result, resultVisibility, exhaustiveSource);
 
   const total = legendItems.reduce((sum, item) => sum + item.count, 0);
   const allVisible = legendItems.every((item) => item.visible);

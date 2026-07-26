@@ -4,12 +4,35 @@ import {
   OFFICIAL_NOT_FEATURE_COLLECTION,
 } from "./errors";
 import type { Dataset, DatasetPoint } from "./types";
-import { isFiniteNumber, isRecord, isValidLat, isValidLon } from "./validation";
+import {
+  isFiniteNumber,
+  isPositiveInteger,
+  isRecord,
+  isValidLat,
+  isValidLon,
+} from "./validation";
 
 type Position = [lon: number, lat: number];
 
 export interface OfficialLoadOptions {
   signal?: AbortSignal;
+}
+
+/**
+ * Evidence that a source returned only part of its result set, e.g. because an
+ * ArcGIS or WFS endpoint applied its default record cap. Silently comparing a
+ * truncated extract would report every withheld record as missing from OSM.
+ */
+export interface OfficialTruncation {
+  /** Features actually present in the response. */
+  returned: number;
+  /** Features the source says exist, when it says so. */
+  matched: number | null;
+}
+
+export interface OfficialData {
+  points: DatasetPoint[];
+  truncation: OfficialTruncation | null;
 }
 
 /**
@@ -21,31 +44,78 @@ export interface OfficialLoadOptions {
 export async function loadOfficial(
   dataset: Dataset,
   options: OfficialLoadOptions = {},
-): Promise<DatasetPoint[]> {
-  if (dataset.source === "preset") {
-    const cached = await tryLoadPoints(presetCacheUrl(dataset.id), options.signal);
+): Promise<OfficialData> {
+  // Only a shipped pack has a build-time copy, and it is filed under its city.
+  if (dataset.source === "preset" && dataset.cityId !== undefined) {
+    const cached = await tryLoadOfficial(
+      presetCacheUrl(dataset.cityId, dataset.id),
+      options.signal,
+    );
     if (cached) return cached;
   }
-  const live = await tryLoadPoints(dataset.geojsonUrl, options.signal);
+  const live = await tryLoadOfficial(dataset.geojsonUrl, options.signal);
   if (!live) {
     throw new Error(OFFICIAL_GEOJSON_UNAVAILABLE);
   }
   return live;
 }
 
-export function presetCacheUrl(datasetId: string): string {
-  const path = `../presets-data/${encodeURIComponent(datasetId)}.geojson`;
+/**
+ * Detect a partial response. Three conventions cover the portals this app
+ * targets:
+ *   - ArcGIS FeatureServer sets `exceededTransferLimit` (top level, or nested
+ *     under `properties` in newer versions).
+ *   - OGC API Features / WFS 2 report `numberMatched` against `numberReturned`.
+ *   - GeoServer WFS 1.x reports `totalFeatures`, sometimes as "unknown".
+ */
+export function detectTruncation(value: unknown): OfficialTruncation | null {
+  if (!isRecord(value) || !Array.isArray(value.features)) return null;
+
+  const returned = value.features.length;
+  const matched =
+    featureCount(value.numberMatched) ?? featureCount(value.totalFeatures);
+  const flagged =
+    value.exceededTransferLimit === true ||
+    (isRecord(value.properties) && value.properties.exceededTransferLimit === true);
+
+  if (!flagged && !(matched !== null && matched > returned)) return null;
+  return { returned, matched };
+}
+
+export function formatTruncation(truncation: OfficialTruncation): string {
+  const of = truncation.matched === null ? "" : ` of ${truncation.matched}`;
+  return (
+    `the source returned only ${truncation.returned}${of} features. ` +
+    "Add paging parameters to geojsonUrl (ArcGIS: resultRecordCount/resultOffset, " +
+    "WFS: count/startIndex)."
+  );
+}
+
+function featureCount(value: unknown): number | null {
+  return isPositiveInteger(value) ? value : null;
+}
+
+/**
+ * Where `scripts/fetch-presets.ts` wrote a shipped dataset's copy: one
+ * directory per city, mirroring `cacheFilePath` in scripts/preset-cache.ts.
+ */
+export function presetCacheUrl(cityId: string, datasetId: string): string {
+  const path = `../presets-data/${encodeURIComponent(cityId)}/${encodeURIComponent(datasetId)}.geojson`;
   return new URL(path, import.meta.url).toString();
 }
 
-async function tryLoadPoints(
+async function tryLoadOfficial(
   url: string,
   signal: AbortSignal | undefined,
-): Promise<DatasetPoint[] | null> {
+): Promise<OfficialData | null> {
   try {
     const res = await fetch(url, { signal });
     if (!res.ok) return null;
-    return parseOfficialGeoJson(await res.json());
+    const json: unknown = await res.json();
+    return {
+      points: parseOfficialGeoJson(json),
+      truncation: detectTruncation(json),
+    };
   } catch (error) {
     if (signal?.aborted) throw error;
     return null;

@@ -19,6 +19,8 @@ import { useTheme } from "./hooks/use-theme";
 import { buildCatalog, type PackLibrary } from "./packs";
 import {
   createResultBucketVisibility,
+  initialResultBucketVisibility,
+  isExhaustiveSource,
   type ResultBucketId,
   type ResultBucketVisibility,
 } from "./result-buckets";
@@ -90,7 +92,7 @@ export function App() {
     }
     clearComparison();
     setStatus("");
-    setResultVisibility(createResultBucketVisibility());
+    setResultVisibility(initialResultBucketVisibility(selectedDataset));
     void runDatasetComparison(selectedDataset, matchRadius);
   }, [
     clearComparison,
@@ -169,11 +171,11 @@ export function App() {
           throw error;
         }
       },
-      keepSessionPack: () => {
+      saveSessionPack: () => {
         const pack = packLibrary.sessionPack;
         if (!pack) return;
         try {
-          packLibrary.keepSessionPack();
+          packLibrary.saveSessionPack();
           handlePackAdded(pack);
         } catch (error) {
           reportError(error);
@@ -241,6 +243,7 @@ export function App() {
               <LegendPanel
                 result={comparisonResult}
                 resultVisibility={resultVisibility}
+                exhaustiveSource={isExhaustiveSource(selectedDataset)}
                 onToggle={toggleResultBucketVisibility}
               />
             </div>

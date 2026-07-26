@@ -57,7 +57,7 @@ export function usePackLibrary(
     }
   }, []);
 
-  const keepSessionPack = useCallback(() => {
+  const saveSessionPack = useCallback(() => {
     if (!sessionPack) return;
     setImportedPacks(saveImportedPack(sessionPack));
     setSessionPack(undefined);
@@ -75,9 +75,9 @@ export function usePackLibrary(
       sessionPack,
       importing,
       importPack,
-      keepSessionPack,
+      saveSessionPack,
       removePack,
     }),
-    [importedPacks, sessionPack, importing, importPack, keepSessionPack, removePack],
+    [importedPacks, sessionPack, importing, importPack, saveSessionPack, removePack],
   );
 }

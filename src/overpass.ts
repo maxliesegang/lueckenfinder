@@ -1,4 +1,4 @@
-import { BBOX_TOKEN } from "./dataset-definition";
+import { BBOX_TOKEN } from "./dataset-criteria";
 import { OVERPASS_INVALID_RESPONSE, OVERPASS_TIMEOUT } from "./errors";
 import type { BBox } from "./geo";
 import type { DatasetPoint } from "./types";

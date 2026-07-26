@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   allDatasets,
-  removeCustomDataset as deleteStoredCustomDataset,
+  removeCustomDataset as removeStoredCustomDataset,
   addCustomDataset as storeCustomDataset,
 } from "../datasets";
 import type { Dataset, DatasetDefinition } from "../types";
@@ -26,7 +26,7 @@ export function useDatasets(): DatasetStore {
   }, []);
 
   const removeCustomDataset = useCallback((datasetId: string) => {
-    deleteStoredCustomDataset(datasetId);
+    removeStoredCustomDataset(datasetId);
     setDatasets(allDatasets());
   }, []);
 

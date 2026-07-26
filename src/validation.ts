@@ -6,6 +6,11 @@ export function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
 }
 
+/** A non-negative, finite, whole number. */
+export function isPositiveInteger(value: unknown): value is number {
+  return isFiniteNumber(value) && Number.isInteger(value) && value >= 0;
+}
+
 export function isValidLon(value: unknown): value is number {
   return isFiniteNumber(value) && Math.abs(value) <= 180;
 }

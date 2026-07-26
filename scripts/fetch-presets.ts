@@ -13,13 +13,18 @@
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseOfficialGeoJson } from "../src/official";
+import {
+  detectTruncation,
+  formatTruncation,
+  parseOfficialGeoJson,
+} from "../src/official";
 import { PRESET_PACKS } from "../src/presets";
 import type { CityPack } from "../src/types";
 import {
-  cacheFileName,
+  cacheFilePath,
   parseCityFilters,
   selectPacks,
+  serializeCacheFile,
   staleCacheFiles,
 } from "./preset-cache";
 
@@ -50,8 +55,9 @@ async function main(): Promise<void> {
 
   for (const pack of packs) {
     console.log(`\n${pack.city.name} (${pack.datasets.length} datasets)`);
+    await mkdir(join(outDir, pack.city.id), { recursive: true });
     for (const dataset of pack.datasets) {
-      outcomes.push(await cacheDataset(dataset));
+      outcomes.push(await cacheDataset(pack.city.id, dataset));
     }
   }
 
@@ -79,8 +85,8 @@ async function main(): Promise<void> {
  * the live source is unreachable. Only a copy that still parses counts as a
  * fallback — a corrupt cache is a failure, not a quiet pass.
  */
-async function cacheDataset(dataset: CityPack["datasets"][number]) {
-  const outputPath = join(outDir, cacheFileName(dataset.id));
+async function cacheDataset(cityId: string, dataset: CityPack["datasets"][number]) {
+  const outputPath = join(outDir, cacheFilePath(cityId, dataset.id));
   try {
     const res = await fetch(dataset.geojsonUrl, {
       signal: AbortSignal.timeout(30_000),
@@ -89,9 +95,18 @@ async function cacheDataset(dataset: CityPack["datasets"][number]) {
     const json: unknown = await res.json();
     parseOfficialGeoJson(json);
 
+    // A capped extract is a URL that needs fixing, not a transient outage, so
+    // it fails outright instead of quietly falling back to the cached copy.
+    const truncation = detectTruncation(json);
+    if (truncation) {
+      const message = `${dataset.id}: ${formatTruncation(truncation)}`;
+      console.warn(`  FAILED ${message}`);
+      return { status: "failed", message } as const;
+    }
+
     const temporaryPath = `${outputPath}.tmp`;
     try {
-      await writeFile(temporaryPath, `${JSON.stringify(json)}\n`);
+      await writeFile(temporaryPath, serializeCacheFile(json));
       await rename(temporaryPath, outputPath);
     } finally {
       await rm(temporaryPath, { force: true });
@@ -120,8 +135,11 @@ async function cacheDataset(dataset: CityPack["datasets"][number]) {
  */
 async function reportStaleFiles(fullRun: boolean): Promise<void> {
   if (!fullRun) return;
-  const allDatasets = PRESET_PACKS.flatMap((pack) => pack.datasets);
-  const stale = staleCacheFiles(await readdir(outDir), allDatasets);
+  const entries = await readdir(outDir, { recursive: true });
+  const stale = staleCacheFiles(
+    entries.map((entry) => entry.replaceAll("\\", "/")),
+    PRESET_PACKS,
+  );
   if (stale.length === 0) return;
   console.warn(
     `\n${stale.length} cached file(s) no longer belong to a preset and can be deleted:\n` +

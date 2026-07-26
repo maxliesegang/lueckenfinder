@@ -17,15 +17,22 @@
 - `scripts/preset-cache.ts` holds the pure selection helpers for the cache script so they stay testable.
 - `scripts/fetch-presets.ts` validates and caches preset GeoJSON for production builds. Treat `public/presets-data/` as generated output.
 - `src/dataset-definition.ts` owns validation for stored and shared dataset definitions; `src/validation.ts` holds the shared runtime type guards used to validate external data (GeoJSON, Overpass, storage).
-- `src/comparison.ts`, `src/matching.ts`, and `src/conflate.ts` contain the main comparison and result-classification logic.
+- `src/osm-selector.ts` owns declarative OSM criteria: one selector generates the Overpass query, the predicate that classifies results, and the expected tags. Keep those three derived from the same selector — that is what stops a query and its expectations from drifting. `src/dataset-query.ts` turns a definition into the request(s) to issue; a selector-based dataset fetches strict and relaxed candidates in one call.
+- `src/dataset-criteria.ts` owns the OSM side of a dataset (selectors, raw queries, tag mapping) and how a topic's criteria merge with a dataset's own. `src/topics.ts` loads `presets/topics.json`, the shipped catalog of reusable criteria that city packs reference by `topic`. Topics are resolved at parse time, so stored and shared payloads stay fully expanded and topic-unaware.
+- `src/comparison.ts`, `src/matching.ts`, and `src/conflate.ts` contain the main comparison and result-classification logic. The comparison cache keys official data per dataset but Overpass responses by request — resolved query plus grid-snapped extent — so datasets asking OSM the same question of the same city share one response.
 - `src/map.ts` and `src/map-layers.ts` own MapLibre rendering and layer state.
 
 ## Dataset Rules
 
 - Keep stored and shared dataset payloads backward compatible unless a migration is intentionally included.
 - Validate data at external boundaries: GeoJSON responses, Overpass responses, storage, and URL payloads.
-- Overpass queries must contain `{{bbox}}`; it is replaced with the official dataset extent at runtime. Keep the comparison engine city-agnostic — a city supplies the initial map view and grouping only.
-- Dataset IDs must be unique across all city packs; they name the build-time cache files.
+- Prefer a shipped `topic` for city-pack datasets, then `osmSelector`/`broadSelector`, and raw `overpassQuery`/`broadMatchQuery` last. A dataset must state its strict criteria exactly once; a dataset's own criteria replace a topic's whole strict or relaxed slot rather than merging into it.
+- Use `anyValue` rather than `tags` for keys OSM writes as semicolon lists (`sport`, `cuisine`, …), or objects tagged with several values will be reported as missing.
+- List every value an `exclude` is meant to rule out (`access: ["private", "no", "permit"]`); a single value silently lets its synonyms through.
+- Mark a dataset `"exhaustive": false` when its official export is not the full population an OSM query returns. It only changes how `onlyInOsm` is presented, never matching. Narrowing a selector instead can misfire: an object the strict criteria exclude but that lacks no expected tag is rescued by neither pass and is reported missing.
+- Raw Overpass queries must contain `{{bbox}}` and carry union statements only — no settings header, no `out` statement. `{{bbox}}` is replaced with the official dataset extent at runtime. Keep the comparison engine city-agnostic — a city supplies the initial map view and grouping only.
+- Treat a capped official response as a data error, not a partial success: `src/official.ts` detects it and the comparison warns, while `scripts/fetch-presets.ts` fails the dataset.
+- Dataset IDs must be unique across all city packs: they are a dataset's runtime identity in storage, share links, and the preset-shadowing check. Build-time cache files live under `public/presets-data/<city>/<dataset>.geojson`.
 - Imported packs must never shadow a shipped city ID or dataset ID, and remote pack payloads stay bounded by the limits in `src/constraints.ts`.
 - Preset data is cached at build time, while custom GeoJSON URLs are fetched directly by the browser and require CORS support.
 - The app only suggests possible OpenStreetMap changes. Do not add automatic OSM editing or imply that official data may be copied without license review.

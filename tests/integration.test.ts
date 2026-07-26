@@ -13,11 +13,13 @@ import { parseOverpassResponse, runOverpass } from "../src/overpass";
 import { PRESET_DATASETS } from "../src/presets";
 import type { Dataset, DatasetDefinition } from "../src/types";
 
+const STRICT_QUERY = 'node["amenity"="bench"]({{bbox}});';
+
 const definition: DatasetDefinition = {
   id: "custom-test",
   label: "Test dataset",
   geojsonUrl: "https://example.com/data.geojson",
-  overpassQuery: 'node["amenity"="bench"]({{bbox}});',
+  overpassQuery: STRICT_QUERY,
   attribution: "Example",
   sourceUrl: "https://example.com/source",
 };
@@ -70,6 +72,52 @@ test("dataset source URLs are optional but validated when present", () => {
   assert.equal(
     parseDatasetDefinition({ ...definition, sourceUrl: "javascript:alert(1)" }),
     null,
+  );
+});
+
+test("a source is exhaustive unless the definition says otherwise", () => {
+  // The default is not written out, so existing payloads keep their shape.
+  assert.deepEqual(
+    parseDatasetDefinition({ ...definition, exhaustive: true }),
+    definition,
+  );
+  assert.deepEqual(parseDatasetDefinition({ ...definition, exhaustive: false }), {
+    ...definition,
+    exhaustive: false,
+  });
+  assert.equal(parseDatasetDefinition({ ...definition, exhaustive: "no" }), null);
+});
+
+test("a dataset must state its strict OSM criteria exactly once", () => {
+  const { overpassQuery: _query, ...withoutQuery } = definition;
+  const selector = { osmSelector: { tags: { amenity: "bench" } } };
+
+  assert.deepEqual(parseDatasetDefinition({ ...withoutQuery, ...selector }), {
+    ...withoutQuery,
+    ...selector,
+  });
+  // Neither, or both — both forms would let the query and the expected tags drift.
+  assert.equal(parseDatasetDefinition(withoutQuery), null);
+  assert.equal(parseDatasetDefinition({ ...definition, ...selector }), null);
+  assert.equal(
+    parseDatasetDefinition({ ...withoutQuery, osmSelector: { tags: {} } }),
+    null,
+  );
+});
+
+test("raw Overpass bodies that fight the request wrapper are rejected", () => {
+  const reject = (overpassQuery: string) =>
+    assert.equal(parseDatasetDefinition({ ...definition, overpassQuery }), null);
+
+  reject("[out:json][timeout:90];node({{bbox}});");
+  reject("node({{bbox}});out center tags;");
+  reject("node({{bbox}});>;");
+  // A tag value that merely contains "out" is fine.
+  assert.ok(
+    parseDatasetDefinition({
+      ...definition,
+      overpassQuery: 'node["name"="Layout"]({{bbox}});',
+    }),
   );
 });
 
@@ -257,8 +305,11 @@ test("preset definitions are valid and have unique IDs", () => {
   }
 });
 
-test("preset cache URLs point at shipped static data", () => {
-  assert.match(presetCacheUrl("custom-test"), /\/presets-data\/custom-test\.geojson$/);
+test("preset cache URLs point at shipped static data, filed by city", () => {
+  assert.match(
+    presetCacheUrl("example-city", "custom-test"),
+    /\/presets-data\/example-city\/custom-test\.geojson$/,
+  );
 });
 
 test("an invalid preset cache falls back to the live source", async () => {
@@ -279,11 +330,30 @@ test("an invalid preset cache falls back to the live source", async () => {
       ],
     });
   };
-  const dataset: Dataset = { ...definition, source: "preset" };
-  assert.deepEqual(await loadOfficial(dataset), [{ lon: 8.4, lat: 49, props: {} }]);
+  const dataset: Dataset = {
+    ...definition,
+    source: "preset",
+    cityId: "example-city",
+  };
+  assert.deepEqual(await loadOfficial(dataset), {
+    points: [{ lon: 8.4, lat: 49, props: {} }],
+    truncation: null,
+  });
   assert.equal(calls.length, 2);
-  assert.match(calls[0] ?? "", /\/presets-data\/custom-test\.geojson$/);
+  assert.match(calls[0] ?? "", /\/presets-data\/example-city\/custom-test\.geojson$/);
   assert.equal(calls[1], definition.geojsonUrl);
+});
+
+test("a preset with no city has no cache file to try", async () => {
+  const calls: string[] = [];
+  globalThis.fetch = async (input) => {
+    calls.push(String(input));
+    return Response.json({ type: "FeatureCollection", features: [] });
+  };
+  // Cache files are filed per city, so without one there is nowhere to look
+  // and the live URL is the only option.
+  await loadOfficial({ ...definition, source: "preset" });
+  assert.deepEqual(calls, [definition.geojsonUrl]);
 });
 
 test("Overpass validates response elements and WGS84 positions", () => {
@@ -321,7 +391,7 @@ test("Overpass requires a bbox token and forwards cancellation", async () => {
     new Promise((_resolve, reject) => {
       init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
     });
-  const pending = runOverpass(definition.overpassQuery, [8, 48, 9, 50], {
+  const pending = runOverpass(STRICT_QUERY, [8, 48, 9, 50], {
     signal: abort.signal,
     timeoutMs: 1_000,
   });
@@ -347,7 +417,7 @@ test("Overpass applies a client-side timeout", async () => {
       init?.signal?.addEventListener("abort", () => reject(init.signal?.reason));
     });
   await assert.rejects(
-    runOverpass(definition.overpassQuery, [8, 48, 9, 50], { timeoutMs: 5 }),
+    runOverpass(STRICT_QUERY, [8, 48, 9, 50], { timeoutMs: 5 }),
     (error: unknown) => error instanceof DOMException && error.name === "TimeoutError",
   );
 });

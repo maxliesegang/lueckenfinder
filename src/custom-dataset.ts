@@ -1,3 +1,4 @@
+import type { OsmSelector } from "./osm-selector";
 import type { DatasetDefinition } from "./types";
 
 export const CUSTOM_DATASET_ATTRIBUTION = "lueckenfinder:generated-custom-attribution";
@@ -5,8 +6,14 @@ export const CUSTOM_DATASET_ATTRIBUTION = "lueckenfinder:generated-custom-attrib
 export interface CustomDatasetDefinitionInput {
   geojsonUrl: string;
   label: string;
-  overpassQuery: string;
   sourceUrl?: string;
+  /** Declarative criteria. Mutually exclusive with `overpassQuery`. */
+  osmSelector?: OsmSelector;
+  /** Raw Overpass QL. Mutually exclusive with `osmSelector`. */
+  overpassQuery?: string;
+  /** Optional relaxed criteria, in whichever form the strict side uses. */
+  broadSelector?: OsmSelector;
+  broadMatchQuery?: string;
 }
 
 export function createCustomDatasetDefinition(
@@ -23,8 +30,11 @@ export function createCustomDatasetDefinition(
     id: `custom-${slug || "dataset"}-${idSuffix}`,
     label,
     geojsonUrl: input.geojsonUrl.trim(),
-    overpassQuery: input.overpassQuery.trim(),
     attribution: CUSTOM_DATASET_ATTRIBUTION,
+    ...(input.osmSelector ? { osmSelector: input.osmSelector } : {}),
+    ...(input.overpassQuery ? { overpassQuery: input.overpassQuery.trim() } : {}),
+    ...(input.broadSelector ? { broadSelector: input.broadSelector } : {}),
+    ...(input.broadMatchQuery ? { broadMatchQuery: input.broadMatchQuery.trim() } : {}),
     ...(input.sourceUrl?.trim() ? { sourceUrl: input.sourceUrl.trim() } : {}),
   };
 }

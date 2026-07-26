@@ -8,10 +8,16 @@ import type { CityDefinition, CityPack, Dataset } from "./types";
  * the deliberate "uneditable in the app, editable via review" contribution
  * path. See presets/README.md for the pack format.
  *
+ * The list is written out rather than globbed because `import.meta.glob` is a
+ * Vite transform and this module is also loaded by tsx, in the tests and in
+ * scripts/fetch-presets.ts. tests/presets.test.ts fails if a pack file is not
+ * registered here, so the one manual step cannot be silently skipped.
+ *
  * Shipping a pack here (rather than loading it from a URL at runtime) also
  * gets it build-time caching: scripts/fetch-presets.ts writes each geojsonUrl
- * to public/presets-data/<id>.geojson so the app can load it same-origin,
- * which is the only way to use sources that do not send CORS headers.
+ * to public/presets-data/<city>/<id>.geojson so the app can load it
+ * same-origin, which is the only way to use sources that do not send CORS
+ * headers.
  *
  * LICENCE: verify each source's terms before adding it. Display attribution
  * through the `attribution` field, and confirm OSM compatibility before using

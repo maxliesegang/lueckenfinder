@@ -1,5 +1,7 @@
 // Shared types for Lückenfinder.
 
+import type { OsmSelector } from "./osm-selector";
+
 export interface PropertyTagRule {
   /** GeoJSON property containing the source value. */
   property: string;
@@ -39,13 +41,47 @@ export interface DatasetDefinition {
   geojsonUrl: string;
 
   /**
-   * Overpass QL body — just the statements inside the union.
+   * Optional shipped topic supplying the OSM criteria below (see topics.ts).
+   * A parsed definition always carries those criteria expanded, so this is a
+   * record of where they came from — and the key by which the same kind of
+   * dataset can be found across cities. Anything the dataset states itself
+   * wins, which is how one city deviates from the shared criteria.
+   */
+  topic?: string;
+
+  /**
+   * Declarative OSM criteria — the preferred way to state what an official
+   * record should look like in OSM. It generates the Overpass query, seeds the
+   * expected tags, and lets the engine classify results without a second
+   * request. See osm-selector.ts.
+   */
+  osmSelector?: OsmSelector;
+
+  /**
+   * Overpass QL body — just the statements inside the union. The escape hatch
+   * for criteria `osmSelector` cannot express. Exactly one of `osmSelector` and
+   * `overpassQuery` is required.
+   *
    * Use the literal token {{bbox}} where a bounding box is needed; it is
    * replaced at query time with the extent of the official data (padded).
    * Example:
    *   node["amenity"="recycling"]["recycling:batteries"="yes"]({{bbox}});
    */
-  overpassQuery: string;
+  overpassQuery?: string;
+
+  /**
+   * Whether the official export lists *every* object an OSM query for this
+   * topic would return. Defaults to true; set it to false when the source is
+   * knowingly a subset — a city publishes its own car parks, its own toilets,
+   * its own bike racks, while OSM also holds everyone else's.
+   *
+   * It changes nothing about matching: an official record still has to be found
+   * in OSM or be reported missing. What it changes is the reading of the
+   * leftovers. For an exhaustive source, an OSM object with no official
+   * counterpart is worth reviewing; for a subset, it is exactly what should be
+   * there, and presenting it as a finding trains people to ignore the bucket.
+   */
+  exhaustive?: boolean;
 
   /** Required attribution string for the official source (CC-BY etc.). */
   attribution: string;
@@ -54,17 +90,23 @@ export interface DatasetDefinition {
   sourceUrl?: string;
 
   /**
-   * Optional relaxed Overpass query (no strict attribute filters) used to find
-   * OSM objects that exist geographically but are missing required tags.
-   * Example: nwr["amenity"="recycling"]({{bbox}});
-   * Results are matched against official points that failed the strict query;
-   * hits go into the `needsTagging` bucket rather than `missingInOsm`.
+   * Optional relaxed criteria used to find OSM objects that exist
+   * geographically but are missing required tags. Results are matched against
+   * official points that failed the strict criteria; hits go into the
+   * `needsTagging` bucket rather than `missingInOsm`.
+   *
+   * Declarative form, preferred. Paired with `osmSelector` it costs no extra
+   * Overpass request.
    */
+  broadSelector?: OsmSelector;
+
+  /** Raw Overpass QL alternative to `broadSelector`. */
   broadMatchQuery?: string;
 
   /**
-   * How official records map onto OSM tags. Used both to pre-fill new objects
-   * (missing-in-OSM) and to detect attribute gaps on matched objects.
+   * How official records map onto OSM tags, beyond what `osmSelector` already
+   * implies. Used both to pre-fill new objects (missing-in-OSM) and to detect
+   * attribute gaps on matched objects. A key here overrides the selector's.
    */
   tagMapping?: TagMapping;
 }

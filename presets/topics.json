@@ -1,0 +1,78 @@
+{
+  "recycling-glass": {
+    "osmSelector": {
+      "tags": { "amenity": "recycling" },
+      "anyOf": [
+        { "tags": { "recycling:glass_bottles": "yes" } },
+        { "tags": { "recycling:glass": "yes" } }
+      ]
+    },
+    "broadSelector": { "tags": { "amenity": "recycling" } },
+    "tagMapping": {
+      "fixed": {
+        "recycling_type": "container",
+        "recycling:glass_bottles": "yes"
+      }
+    }
+  },
+  "recycling-batteries": {
+    "osmSelector": {
+      "tags": { "amenity": "recycling", "recycling:batteries": "yes" }
+    },
+    "broadSelector": { "tags": { "amenity": "recycling" } },
+    "tagMapping": { "fixed": { "recycling_type": "container" } }
+  },
+  "recycling-green-waste": {
+    "osmSelector": {
+      "tags": { "amenity": "recycling", "recycling:green_waste": "yes" }
+    },
+    "broadSelector": { "tags": { "amenity": "recycling" } },
+    "tagMapping": { "fixed": { "recycling_type": "container" } }
+  },
+  "recycling-clothes": {
+    "osmSelector": {
+      "tags": { "amenity": "recycling", "recycling:clothes": "yes" }
+    },
+    "broadSelector": { "tags": { "amenity": "recycling" } },
+    "tagMapping": { "fixed": { "recycling_type": "container" } }
+  },
+  "public-toilets": {
+    "osmSelector": { "tags": { "amenity": "toilets" } }
+  },
+  "disabled-parking-space": {
+    "osmSelector": {
+      "tags": { "amenity": "parking_space", "parking_space": "disabled" }
+    }
+  },
+  "car-park": {
+    "osmSelector": { "tags": { "amenity": "parking" } }
+  },
+  "bicycle-parking": {
+    "osmSelector": { "tags": { "amenity": "bicycle_parking" } }
+  },
+  "table-tennis": {
+    "osmSelector": {
+      "tags": { "leisure": "pitch" },
+      "anyValue": { "sport": ["table_tennis"] },
+      "exclude": { "access": ["private", "no", "permit"] }
+    },
+    "broadSelector": {
+      "exclude": { "access": ["private", "no", "permit"] },
+      "anyOf": [
+        { "anyValue": { "sport": ["table_tennis"] } },
+        { "tags": { "leisure": "table_tennis_table" } }
+      ]
+    },
+    "tagMapping": { "fixed": { "sport": "table_tennis" } }
+  },
+  "drinking-water": {
+    "osmSelector": { "tags": { "amenity": "drinking_water" } },
+    "broadSelector": { "tags": { "drinking_water": "yes" } }
+  },
+  "playground": {
+    "osmSelector": {
+      "tags": { "leisure": "playground" },
+      "exclude": { "access": ["private", "no", "permit"] }
+    }
+  }
+}

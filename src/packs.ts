@@ -134,7 +134,7 @@ export interface PackLibrary {
   importing: boolean;
   /** Resolves once the pack is stored; rejects with a user-facing error. */
   importPack: (url: string) => Promise<CityPack>;
-  keepSessionPack: () => void;
+  saveSessionPack: () => void;
   removePack: (cityId: string) => void;
 }
 

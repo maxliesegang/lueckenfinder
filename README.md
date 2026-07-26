@@ -11,6 +11,12 @@ buckets:
 - **Matched** — present in both; the app flags attribute gaps on the OSM object.
 - **Only in OSM** — OSM object with no official match → review (may be valid, may be stale).
 
+That last bucket only carries meaning when the official source lists *every*
+object of its kind. Many do not: a city publishes its own car parks while OSM
+also holds the supermarket's. Such a dataset says `"exhaustive": false`, and the
+app then presents those OSM objects as expected rather than as findings — hidden
+on the map by default, and labelled instead of asking for a review.
+
 Nothing is edited automatically and nothing is marked "done". The app only
 produces suggestions; a human verifies and edits OSM.
 
@@ -90,20 +96,74 @@ Two tiers:
   A shipped pack also gets its official data cached at build time, which is how
   sources without CORS headers stay usable.
 - **Custom** mappings are added in the app (label + GeoJSON URL + optional
-  source URL + Overpass query). They are saved to `localStorage`, or you can "Copy
-  share link" to share a mapping via URL without saving anything.
+  source URL + OSM tags). They are saved to `localStorage`, or you can "Copy
+  share link" to share a mapping via URL without saving anything. **Test** runs
+  the mapping once without saving and reports how many records each side
+  returns.
 
-Each mapping pairs a `geojsonUrl` with an `overpassQuery`. Use the `{{bbox}}`
-token in the query; it is replaced with the official data's extent at run time.
+### Saying what an OSM object should look like
 
-Optional official properties can be checked against OSM with `tagMapping`.
+Each mapping pairs a `geojsonUrl` with the OSM criteria an official record is
+expected to satisfy. State them declaratively with `osmSelector`:
+
+```jsonc
+"osmSelector": {
+  "tags": { "amenity": "recycling" },     // ["amenity"="recycling"]
+  "anyValue": { "sport": ["table_tennis"] }, // one of these values, semicolon
+                                             // lists included
+  "present": ["operator"],                 // ["operator"]
+  "absent": ["disused"],                   // [!"disused"]
+  "exclude": { "access": ["private", "no"] }, // none of these values; a bare
+                                              // string means a list of one
+  "types": ["node", "way"],                // defaults to ["nwr"]
+  "anyOf": [                               // matches if ANY branch matches;
+    { "tags": { "recycling:glass": "yes" } },        // each is combined with
+    { "tags": { "recycling:glass_bottles": "yes" } } // the conditions above
+  ]
+}
+```
+
+A selector is the single source of truth: it generates the Overpass query, it
+decides whether a fetched object satisfies the criteria, and its `tags` become
+expected tags automatically — so a query and its expectations cannot drift
+apart. A tag only *some* `anyOf` branches require holds for some matches only,
+so it is not treated as an expectation; one that every branch requires is.
+
+Exclusions are usually plural: a publicly usable playground is neither
+`access=private` nor `access=no` nor `access=permit`, and listing only one of
+them lets the others through. Values are compared whole, so excluding `no` never
+catches `nozzle`, and a key that is absent altogether satisfies the exclusion.
+
+Use `anyValue` where OSM allows several values for one key. `sport=table_tennis`
+and `sport=table_tennis;basketball` describe the same table, and an exact `tags`
+condition would match only the first — reporting the second as missing from OSM.
+Because any of the listed values may be the one present, `anyValue` implies no
+expected tag; state it in `tagMapping.fixed` if you want one. Expected tags are
+themselves checked list-aware, so expecting `sport=table_tennis` is satisfied by
+`sport=table_tennis;basketball`.
+
+Datasets in a shipped city pack usually name a **topic** instead of writing any
+of this out, so that every city compares the same kind of thing the same way;
+see [`presets/README.md`](presets/README.md#topics).
+
+`broadSelector` states relaxed criteria used to spot objects that already exist
+in OSM but are missing tags. Paired with `osmSelector` it costs no extra
+Overpass request: both sets are fetched in one call and split locally.
+
+For criteria a selector cannot express, `overpassQuery` takes raw Overpass QL
+instead (and `broadMatchQuery` the relaxed variant). Supply only the statements
+inside the union — the app adds the settings header and the `out` statement —
+and use the `{{bbox}}` token, which is replaced with the official data's extent
+at run time. Exactly one of `osmSelector` and `overpassQuery` is required.
+
+Official properties can additionally be checked against OSM with `tagMapping`.
 Use a property name directly, or an extraction rule when the value is embedded
 in a larger string. A `constant` emits a fixed tag value whenever its source
 property is present and non-empty:
 
 ```ts
 tagMapping: {
-  fixed: { amenity: "bicycle_parking" },
+  fixed: { recycling_type: "container" }, // extras beyond the selector's tags
   fromProps: {
     capacity: "number_of_spaces",
     covered: {
@@ -121,13 +181,22 @@ tagMapping: {
 
 `extract` uses its first regular-expression capture group. Missing, empty,
 non-scalar, non-matching, and unlisted `values` are ignored. `constant` and
-`values` are mutually exclusive. A resolved property tag overrides a fixed tag
-with the same key. Known values that differ from OSM appear in the **Tag
-differences** result bucket.
+`values` are mutually exclusive. Precedence runs selector tags → `fixed` →
+`fromProps`, so a resolved property tag overrides a fixed tag with the same key
+and a fixed tag overrides the selector's. Known values that differ from OSM
+appear in the **Tag differences** result bucket.
 
 > **CORS note:** preset data is cached same-origin at build time, so it always
 > loads. Custom GeoJSON URLs are fetched live in the browser and only work if
 > the remote server sends CORS headers — many open-data portals do not.
+
+> **Paging note:** many portals cap a single response (ArcGIS commonly at 1000
+> or 2000 records). The app detects a capped response — via
+> `exceededTransferLimit`, or `numberMatched`/`totalFeatures` exceeding what
+> arrived — and warns, because a truncated extract would report every withheld
+> record as missing from OSM. Shipped presets fail the build instead. Fix it by
+> adding paging parameters to `geojsonUrl` (`resultRecordCount`/`resultOffset`
+> for ArcGIS, `count`/`startIndex` for WFS).
 
 ## Licensing — read before mapping
 

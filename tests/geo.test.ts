@@ -6,6 +6,7 @@ import {
   metersToDegrees,
   padBbox,
   pointInBbox,
+  snapBbox,
 } from "../src/geo";
 
 test("haversineMeters returns a known city-scale distance", () => {
@@ -30,6 +31,21 @@ test("padding and degree conversion validate their inputs", () => {
   assert.ok(padded[1] < 49);
   assert.ok(padded[2] > 9);
   assert.ok(padded[3] > 50);
+});
+
+test("snapping grows a bbox onto a grid and never shrinks it", () => {
+  assert.throws(() => snapBbox([0, 0, 1, 1], 0), /positive number/);
+
+  const bbox: [number, number, number, number] = [8.3814, 48.9522, 8.5361, 49.0821];
+  const snapped = snapBbox(bbox, 0.01);
+  assert.deepEqual(snapped, [8.38, 48.95, 8.54, 49.09]);
+  assert.ok(snapped[0] <= bbox[0] && snapped[1] <= bbox[1]);
+  assert.ok(snapped[2] >= bbox[2] && snapped[3] >= bbox[3]);
+
+  // Extents differing by less than the grid land on the same request.
+  assert.deepEqual(snapBbox([8.3819, 48.9525, 8.5359, 49.0817], 0.01), snapped);
+  // Already on the grid, so snapping is idempotent.
+  assert.deepEqual(snapBbox(snapped, 0.01), snapped);
 });
 
 test("pointInBbox includes edges and excludes points outside", () => {

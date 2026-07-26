@@ -1,16 +1,20 @@
-import type { DatasetDefinition, PropertyTagMapping, PropertyTagRule } from "./types";
+import {
+  mergeOsmCriteria,
+  type OsmCriteria,
+  parseOsmCriteria,
+} from "./dataset-criteria";
+import { getTopicCriteria } from "./topics";
+import type { DatasetDefinition } from "./types";
 import { httpUrl, isRecord, nonEmptyString, safeId } from "./validation";
-
-/**
- * Placeholder every Overpass query must contain. `overpass.ts` replaces it
- * with the official data extent at query time; validators and form hints share
- * this constant so the contract cannot drift between them.
- */
-export const BBOX_TOKEN = "{{bbox}}";
 
 /**
  * Parse an untrusted value into a serializable dataset definition.
  * Unknown properties, including a forged `source`, are intentionally dropped.
+ *
+ * A `topic` supplies OSM criteria the dataset does not state itself (see
+ * topics.ts). The result is fully expanded — the criteria a topic contributed
+ * are written out — so everything downstream, including storage and share
+ * payloads, keeps working without knowing topics exist.
  */
 export function parseDatasetDefinition(value: unknown): DatasetDefinition | null {
   if (!isRecord(value)) return null;
@@ -18,16 +22,21 @@ export function parseDatasetDefinition(value: unknown): DatasetDefinition | null
   const id = safeId(value.id);
   const label = nonEmptyString(value.label);
   const geojsonUrl = httpUrl(value.geojsonUrl);
-  const overpassQuery = bboxQuery(value.overpassQuery);
   const attribution = nonEmptyString(value.attribution);
 
-  if (
-    id === null ||
-    label === null ||
-    geojsonUrl === null ||
-    overpassQuery === null ||
-    attribution === null
-  ) {
+  if (id === null || label === null || geojsonUrl === null || attribution === null) {
+    return null;
+  }
+
+  const own = parseOsmCriteria(value);
+  if (own === null) return null;
+
+  const topic = parseTopic(value.topic);
+  if (topic === null) return null;
+
+  const criteria = mergeOsmCriteria(topic.criteria, own);
+  // Without strict criteria there is nothing to query for.
+  if (criteria.osmSelector === undefined && criteria.overpassQuery === undefined) {
     return null;
   }
 
@@ -35,26 +44,23 @@ export function parseDatasetDefinition(value: unknown): DatasetDefinition | null
     id,
     label,
     geojsonUrl,
-    overpassQuery,
     attribution,
+    ...criteria,
   };
+
+  if (topic.id !== undefined) definition.topic = topic.id;
+
+  // Only the exception is recorded; a source is exhaustive unless it says
+  // otherwise, so storing `true` would just be noise in every payload.
+  if (value.exhaustive !== undefined) {
+    if (typeof value.exhaustive !== "boolean") return null;
+    if (!value.exhaustive) definition.exhaustive = false;
+  }
 
   if (value.sourceUrl !== undefined) {
     const sourceUrl = httpUrl(value.sourceUrl);
     if (sourceUrl === null) return null;
     definition.sourceUrl = sourceUrl;
-  }
-
-  if (value.broadMatchQuery !== undefined) {
-    const broadMatchQuery = bboxQuery(value.broadMatchQuery);
-    if (broadMatchQuery === null) return null;
-    definition.broadMatchQuery = broadMatchQuery;
-  }
-
-  if (value.tagMapping !== undefined) {
-    const tagMapping = parseTagMapping(value.tagMapping);
-    if (tagMapping === null) return null;
-    definition.tagMapping = tagMapping;
   }
 
   return definition;
@@ -64,105 +70,19 @@ export function isDatasetDefinition(value: unknown): value is DatasetDefinition 
   return parseDatasetDefinition(value) !== null;
 }
 
-function parseTagMapping(value: unknown): DatasetDefinition["tagMapping"] | null {
-  if (!isRecord(value)) return null;
-  const tagMapping: NonNullable<DatasetDefinition["tagMapping"]> = {};
+/**
+ * Resolve the optional `topic` reference. An unknown topic fails the parse
+ * rather than degrading to "no criteria": a pack naming a topic this build does
+ * not ship is a mistake its author should see, not a dataset that quietly
+ * queries something else.
+ */
+function parseTopic(
+  value: unknown,
+): { id: string | undefined; criteria: OsmCriteria } | null {
+  if (value === undefined) return { id: undefined, criteria: {} };
 
-  if (value.fixed !== undefined) {
-    const fixed = stringRecord(value.fixed);
-    if (fixed === null) return null;
-    tagMapping.fixed = fixed;
-  }
-  if (value.fromProps !== undefined) {
-    const fromProps = propertyTagRules(value.fromProps);
-    if (fromProps === null) return null;
-    tagMapping.fromProps = fromProps;
-  }
-
-  return tagMapping;
-}
-
-function propertyTagRules(value: unknown): Record<string, PropertyTagMapping> | null {
-  if (!isRecord(value)) return null;
-  const rules: Record<string, PropertyTagMapping> = {};
-
-  for (const [osmKey, entry] of Object.entries(value)) {
-    if (osmKey.length === 0) return null;
-    if (typeof entry === "string") {
-      const property = nonEmptyString(entry);
-      if (property === null) return null;
-      rules[osmKey] = property;
-      continue;
-    }
-    if (!isRecord(entry)) return null;
-
-    const property = nonEmptyString(entry.property);
-    if (property === null) return null;
-    const rule: PropertyTagRule = { property };
-
-    if (entry.extract !== undefined) {
-      const extract = nonEmptyString(entry.extract);
-      if (extract === null || !validCapturePattern(extract)) return null;
-      rule.extract = extract;
-    }
-    if (entry.constant !== undefined) {
-      const constant = nonEmptyString(entry.constant);
-      if (constant === null || entry.values !== undefined) return null;
-      rule.constant = constant;
-    }
-    if (entry.values !== undefined) {
-      const values = stringRecord(entry.values);
-      if (values === null) return null;
-      rule.values = values;
-    }
-    rules[osmKey] = rule;
-  }
-
-  return rules;
-}
-
-function stringRecord(value: unknown): Record<string, string> | null {
-  if (!isRecord(value)) return null;
-  const entries = Object.entries(value);
-  for (const [key, entry] of entries) {
-    if (key.length === 0 || typeof entry !== "string" || entry.length === 0) {
-      return null;
-    }
-  }
-  return Object.fromEntries(entries) as Record<string, string>;
-}
-
-function validCapturePattern(pattern: string): boolean {
-  try {
-    new RegExp(pattern);
-    return hasCaptureGroup(pattern);
-  } catch {
-    return false;
-  }
-}
-
-function hasCaptureGroup(pattern: string): boolean {
-  let escaped = false;
-  let inCharacterClass = false;
-
-  for (let index = 0; index < pattern.length; index++) {
-    const character = pattern[index];
-    if (escaped) {
-      escaped = false;
-    } else if (character === "\\") {
-      escaped = true;
-    } else if (character === "[") {
-      inCharacterClass = true;
-    } else if (character === "]") {
-      inCharacterClass = false;
-    } else if (character === "(" && !inCharacterClass && pattern[index + 1] !== "?") {
-      return true;
-    }
-  }
-  return false;
-}
-
-function bboxQuery(value: unknown): string | null {
-  const query = nonEmptyString(value);
-  return query?.includes(BBOX_TOKEN) ? query : null;
+  const id = safeId(value);
+  if (id === null) return null;
+  const criteria = getTopicCriteria(id);
+  return criteria === null ? null : { id, criteria };
 }

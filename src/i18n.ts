@@ -9,6 +9,7 @@ import {
   OFFICIAL_NO_FEATURES,
   OFFICIAL_NO_POINTS,
   OFFICIAL_NOT_FEATURE_COLLECTION,
+  OFFICIAL_TRUNCATED,
   OVERPASS_INVALID_RESPONSE,
   OVERPASS_TIMEOUT,
 } from "./errors";
@@ -95,7 +96,18 @@ const en = {
   "sourceForm.labelPlaceholder": "e.g. Drinking fountains",
   "sourceForm.geojsonUrl": "Official GeoJSON URL",
   "sourceForm.sourceUrl": "Data source URL (optional)",
+  "sourceForm.osmTags": "OSM tags",
+  "sourceForm.osmTagsHint":
+    "One key=value per line. These generate the Overpass query and the tags each official record is expected to have.",
+  "sourceForm.broadTags": "Relaxed OSM tags (optional)",
+  "sourceForm.broadTagsHint":
+    "Looser tags used to spot objects that already exist in OSM but are missing tags.",
   "sourceForm.overpassQuery": "Overpass query (use {{bboxToken}})",
+  "sourceForm.overpassQueryHint":
+    "Advanced alternative to OSM tags, for criteria tags cannot express. Union statements only — the app adds the header and the out statement.",
+  "sourceForm.testResult": "{{official}} official records, {{osm}} OSM objects.",
+  "actions.test": "Test",
+  "actions.testing": "Testing…",
   "actions.save": "Save",
   "actions.copyShareLink": "Copy share link",
   "actions.cancel": "Cancel",
@@ -110,6 +122,11 @@ const en = {
   "status.comparing": "Comparing…",
   "status.shareCopied": "Share link copied to clipboard.",
   "validation.bboxToken": 'Include the literal "{{bboxToken}}" token in the query.',
+  "validation.osmCriteria": "Enter OSM tags or an Overpass query — not both.",
+  "validation.tagLines": "Use one key=value per line.",
+  "validation.overpassSettings":
+    "Remove the [out:…] / [timeout:…] header — the app adds its own.",
+  "validation.overpassOut": "Remove the out statement — the app adds its own.",
   "source.customAttribution": "Custom source — verify licence before editing OSM.",
   "error.clipboard": "Clipboard access is not available in this browser.",
   "error.matchRadius": "Match radius must be between 1 and 2,000 metres.",
@@ -123,6 +140,8 @@ const en = {
   "error.invalidDataset": "The dataset definition is invalid.",
   "warning.relaxedQuery":
     "The relaxed OSM query failed, so some missing items may only need tags.",
+  "warning.officialTruncated":
+    "The official source returned only part of its data, so some results may be wrong. Its URL probably needs paging parameters.",
   "bucket.missing.name": "Missing",
   "bucket.missing.action": "add to OSM",
   "bucket.needsTagging.name": "Tag differences",
@@ -131,6 +150,7 @@ const en = {
   "bucket.matched.action": "check tags",
   "bucket.onlyInOsm.name": "OSM only",
   "bucket.onlyInOsm.action": "review",
+  "bucket.onlyInOsm.partialAction": "expected — source is not a complete list",
   "popup.andMore": "…and {{count}} more",
   "popup.andMoreFields": "{{count}} more fields hidden",
   "popup.tags": "{{count}} tags",
@@ -248,7 +268,18 @@ const de: Record<TranslationKey, string> = {
   "sourceForm.labelPlaceholder": "z. B. Trinkbrunnen",
   "sourceForm.geojsonUrl": "URL des amtlichen GeoJSON",
   "sourceForm.sourceUrl": "URL der Datenquelle (optional)",
+  "sourceForm.osmTags": "OSM-Tags",
+  "sourceForm.osmTagsHint":
+    "Ein key=value pro Zeile. Daraus entstehen die Overpass-Abfrage und die Tags, die jeder amtliche Datensatz haben sollte.",
+  "sourceForm.broadTags": "Erweiterte OSM-Tags (optional)",
+  "sourceForm.broadTagsHint":
+    "Lockerere Tags, um Objekte zu finden, die in OSM bereits existieren, aber Tags vermissen lassen.",
   "sourceForm.overpassQuery": "Overpass-Abfrage (mit {{bboxToken}})",
+  "sourceForm.overpassQueryHint":
+    "Alternative für Fortgeschrittene, wenn Tags nicht ausreichen. Nur die Anweisungen der Union — Kopf und out-Anweisung ergänzt die App.",
+  "sourceForm.testResult": "{{official}} amtliche Datensätze, {{osm}} OSM-Objekte.",
+  "actions.test": "Testen",
+  "actions.testing": "Wird getestet…",
   "actions.save": "Speichern",
   "actions.copyShareLink": "Freigabelink kopieren",
   "actions.cancel": "Abbrechen",
@@ -264,6 +295,12 @@ const de: Record<TranslationKey, string> = {
   "status.shareCopied": "Freigabelink wurde in die Zwischenablage kopiert.",
   "validation.bboxToken":
     'Die Abfrage muss genau den Platzhalter "{{bboxToken}}" enthalten.',
+  "validation.osmCriteria":
+    "Bitte OSM-Tags oder eine Overpass-Abfrage angeben — nicht beides.",
+  "validation.tagLines": "Pro Zeile ein key=value angeben.",
+  "validation.overpassSettings":
+    "Den Kopf [out:…] / [timeout:…] entfernen — die App ergänzt ihn selbst.",
+  "validation.overpassOut": "Die out-Anweisung entfernen — die App ergänzt sie selbst.",
   "source.customAttribution":
     "Eigene Quelle — Lizenz vor der Bearbeitung von OSM prüfen.",
   "error.clipboard":
@@ -279,6 +316,8 @@ const de: Record<TranslationKey, string> = {
   "error.invalidDataset": "Die Datensatzdefinition ist ungültig.",
   "warning.relaxedQuery":
     "Die erweiterte OSM-Abfrage ist fehlgeschlagen. Einige fehlende Objekte benötigen möglicherweise nur zusätzliche Tags.",
+  "warning.officialTruncated":
+    "Die amtliche Quelle hat nur einen Teil ihrer Daten geliefert, einige Ergebnisse können daher falsch sein. Vermutlich fehlen Paging-Parameter in der URL.",
   "bucket.missing.name": "Fehlend",
   "bucket.missing.action": "zu OSM hinzufügen",
   "bucket.needsTagging.name": "Tag-Abweichungen",
@@ -287,6 +326,7 @@ const de: Record<TranslationKey, string> = {
   "bucket.matched.action": "Tags prüfen",
   "bucket.onlyInOsm.name": "Nur in OSM",
   "bucket.onlyInOsm.action": "prüfen",
+  "bucket.onlyInOsm.partialAction": "erwartet — Quelle ist keine vollständige Liste",
   "popup.andMore": "…und {{count}} weitere",
   "popup.andMoreFields": "{{count}} weitere Felder ausgeblendet",
   "popup.tags": "{{count}} Tags",
@@ -342,6 +382,7 @@ const TRANSLATED_MESSAGES: Partial<Record<string, TranslationKey>> = {
   [OFFICIAL_NO_POINTS]: "error.noOfficialPoints",
   [OFFICIAL_GEOJSON_UNAVAILABLE]: "error.officialGeojson",
   [BROAD_QUERY_FAILED]: "warning.relaxedQuery",
+  [OFFICIAL_TRUNCATED]: "warning.officialTruncated",
   [OVERPASS_TIMEOUT]: "error.overpassTimeout",
   [OVERPASS_INVALID_RESPONSE]: "error.invalidOsmData",
   [DATASET_INVALID]: "error.invalidDataset",

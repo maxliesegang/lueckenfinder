@@ -86,7 +86,7 @@ export function CityPackForm({ packLibrary }: CityPackFormProps) {
                   variant="tertiary"
                   icon="check"
                   iconPosition="left"
-                  onClick={packLibrary.keepSessionPack}
+                  onClick={packLibrary.saveSessionPack}
                 >
                   {t("pack.keepSession")}
                 </KernButton>

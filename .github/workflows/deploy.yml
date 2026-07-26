@@ -5,8 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    # Weekly refresh so cached official data stays current and you get
-    # week-over-week snapshots committed in the build artifact.
+    # Weekly redeploy so the published site's official data stays current.
+    # The refreshed GeoJSON only lives in the build artifact — the checked-in
+    # fallback cache is updated by the refresh-presets workflow instead.
     - cron: "17 4 * * 1"
 
 permissions:

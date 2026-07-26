@@ -217,3 +217,41 @@ test("tag gaps use exact string equality and ignore extra OSM tags", () => {
     ],
   );
 });
+
+test("selector tags become expectations without being repeated in tagMapping", () => {
+  const dataset: Dataset = {
+    id: "test",
+    label: "Test",
+    source: "custom",
+    geojsonUrl: "",
+    attribution: "",
+    osmSelector: {
+      tags: { amenity: "recycling" },
+      exclude: { access: ["private"] },
+      anyOf: [{ tags: { "recycling:glass": "yes" } }],
+    },
+    tagMapping: { fixed: { recycling_type: "container" } },
+  };
+
+  // Base tags hold for every match, and so does the sole `anyOf` branch, so
+  // both are expected; an `exclude` states no value, so it is not.
+  assert.deepEqual(expectedTags(point(), dataset), {
+    amenity: "recycling",
+    "recycling:glass": "yes",
+    recycling_type: "container",
+  });
+});
+
+test("an explicit fixed tag overrides the one implied by the selector", () => {
+  const dataset: Dataset = {
+    id: "test",
+    label: "Test",
+    source: "custom",
+    geojsonUrl: "",
+    attribution: "",
+    osmSelector: { tags: { "recycling:glass": "yes" } },
+    tagMapping: { fixed: { "recycling:glass": "no" } },
+  };
+
+  assert.deepEqual(expectedTags(point(), dataset), { "recycling:glass": "no" });
+});

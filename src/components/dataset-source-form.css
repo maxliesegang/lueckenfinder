@@ -20,6 +20,30 @@
   font-size: var(--kern-font-size-14, 0.875rem);
 }
 
+.dataset-source-form .dataset-source-form__hint {
+  margin: 0 0 var(--kern-metric-space-small, 8px);
+  font-size: var(--kern-font-size-14, 0.875rem);
+  color: var(--kern-color-neutral-600, #4a5568);
+}
+
+.dataset-source-form .dataset-source-form__advanced > summary {
+  cursor: pointer;
+  font-size: var(--kern-font-size-14, 0.875rem);
+}
+
+.dataset-source-form .dataset-source-form__advanced[open] > summary {
+  margin-bottom: var(--kern-metric-space-small, 8px);
+}
+
+.dataset-source-form .dataset-source-form__test-result {
+  margin: 0;
+  font-size: var(--kern-font-size-14, 0.875rem);
+}
+
+.dataset-source-form .dataset-source-form__test-result--warning {
+  color: var(--kern-color-danger-600, #b3261e);
+}
+
 .dataset-source-form .dataset-source-form__actions {
   display: flex;
   flex-direction: column;

@@ -21,8 +21,8 @@ export function haversineMeters(
 
 export type BBox = [minLon: number, minLat: number, maxLon: number, maxLat: number];
 
-export function bboxOfPoints(pts: Array<{ lon: number; lat: number }>): BBox {
-  if (pts.length === 0) {
+export function bboxOfPoints(points: Array<{ lon: number; lat: number }>): BBox {
+  if (points.length === 0) {
     throw new Error("Cannot calculate a bounding box for an empty point set.");
   }
 
@@ -30,14 +30,14 @@ export function bboxOfPoints(pts: Array<{ lon: number; lat: number }>): BBox {
     minLat = Infinity,
     maxLon = -Infinity,
     maxLat = -Infinity;
-  for (const p of pts) {
-    if (!Number.isFinite(p.lon) || !Number.isFinite(p.lat)) {
+  for (const point of points) {
+    if (!Number.isFinite(point.lon) || !Number.isFinite(point.lat)) {
       throw new Error("Cannot calculate a bounding box from invalid coordinates.");
     }
-    if (p.lon < minLon) minLon = p.lon;
-    if (p.lat < minLat) minLat = p.lat;
-    if (p.lon > maxLon) maxLon = p.lon;
-    if (p.lat > maxLat) maxLat = p.lat;
+    if (point.lon < minLon) minLon = point.lon;
+    if (point.lat < minLat) minLat = point.lat;
+    if (point.lon > maxLon) maxLon = point.lon;
+    if (point.lat > maxLat) maxLat = point.lat;
   }
   return [minLon, minLat, maxLon, maxLat];
 }
@@ -52,6 +52,51 @@ export function padBbox(bbox: BBox, meters: number): BBox {
   const dLat = meters / 111_320;
   const dLon = meters / longitudeMetersPerDegree(midLat);
   return [minLon - dLon, minLat - dLat, maxLon + dLon, maxLat + dLat];
+}
+
+/**
+ * Grow a bbox outward until each edge sits on a multiple of `degrees`.
+ *
+ * Datasets covering the same city produce bboxes that differ by metres, which
+ * is enough to make two otherwise identical Overpass requests miss each other
+ * in a cache keyed by extent. Snapping to a coarse grid collapses those into
+ * one request; the result is a superset, and callers already narrow points to
+ * the extent they actually care about.
+ */
+export function snapBbox(bbox: BBox, degrees: number): BBox {
+  if (!Number.isFinite(degrees) || degrees <= 0) {
+    throw new Error("Bounding-box grid size must be a positive number.");
+  }
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  return [
+    gridEdge(minLon, degrees, Math.floor),
+    gridEdge(minLat, degrees, Math.floor),
+    gridEdge(maxLon, degrees, Math.ceil),
+    gridEdge(maxLat, degrees, Math.ceil),
+  ];
+}
+
+/**
+ * One edge, snapped to the grid. Both the division and the multiplication leave
+ * floating-point dust — `8.54 / 0.01` is `854.0000000000001`, which `Math.ceil`
+ * turns into a whole extra cell — so each is trimmed well below any meaningful
+ * geographic resolution. Without that, snapping an already snapped bbox would
+ * move it, and two callers could key the same extent differently.
+ */
+function gridEdge(
+  value: number,
+  degrees: number,
+  round: (value: number) => number,
+): number {
+  return trimFloatDust(round(trimFloatDust(value / degrees)) * degrees);
+}
+
+/** Decimal places kept after floating-point arithmetic — well below any meaningful geographic resolution. */
+const COORDINATE_PRECISION = 9;
+
+/** Strip floating-point dust below {@link COORDINATE_PRECISION} decimal places. */
+function trimFloatDust(value: number): number {
+  return Number(value.toFixed(COORDINATE_PRECISION));
 }
 
 /** Whether a point lies inside a bounding box, edges included. */

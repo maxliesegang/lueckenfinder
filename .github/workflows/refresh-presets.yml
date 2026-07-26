@@ -1,0 +1,91 @@
+name: Refresh preset data
+
+on:
+  # Monthly. The deploy workflow already refetches on every build, so this job
+  # exists only to keep the checked-in fallback cache in `public/presets-data/`
+  # from rotting and to surface portal changes as a reviewable diff.
+  schedule:
+    - cron: "17 5 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: refresh-presets
+  cancel-in-progress: false
+
+env:
+  BRANCH: automated/refresh-presets
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # Best effort: one dead portal must not block refreshing the others. The
+      # log is kept so the pull request can name what fell back to cache.
+      - name: Fetch preset data
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run fetch:presets:best-effort 2>&1 | tee fetch.log
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if [ -n "$(git status --porcelain public/presets-data)" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Preset data is unchanged; nothing to open a pull request for."
+          fi
+
+      # A schema break or an emptied dataset should fail here rather than land
+      # in a pull request that looks routine.
+      - name: Check
+        if: steps.changes.outputs.changed == 'true'
+        run: npm run check
+
+      - name: Open or update pull request
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          {
+            echo "Automated monthly refresh of the checked-in official-data cache."
+            echo
+            echo '```'
+            grep -E '^(  (FAILED|CACHE)|Done:)' fetch.log || echo 'All datasets refreshed live.'
+            echo '```'
+            echo
+            echo "Review the diff for schema changes, dropped features, or a"
+            echo "dataset that suddenly lost most of its rows before merging."
+          } > pr-body.md
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add public/presets-data
+          git commit -m "chore: refresh cached preset data"
+          git push --force origin "$BRANCH"
+
+          if [ -z "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr create \
+              --base "${{ github.event.repository.default_branch }}" \
+              --head "$BRANCH" \
+              --title "chore: refresh cached preset data" \
+              --body-file pr-body.md
+          else
+            gh pr edit "$BRANCH" --body-file pr-body.md
+          fi

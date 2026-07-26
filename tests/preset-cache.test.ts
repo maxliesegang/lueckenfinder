@@ -2,9 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
-  cacheFileName,
+  cacheFilePath,
   parseCityFilters,
   selectPacks,
+  serializeCacheFile,
   staleCacheFiles,
 } from "../scripts/preset-cache";
 import type { CityPack } from "../src/types";
@@ -62,18 +63,131 @@ test("unknown city ids are reported rather than silently skipped", () => {
   assert.deepEqual(selection.unknownCityIds, ["atlantis"]);
 });
 
-test("cache files are flat and named by dataset id", () => {
-  assert.equal(cacheFileName("ka-benches"), "ka-benches.geojson");
+test("cache files live in a directory named after their city", () => {
+  assert.equal(
+    cacheFilePath("karlsruhe", "ka-benches"),
+    "karlsruhe/ka-benches.geojson",
+  );
 });
 
 test("stale cache files are the ones no dataset claims", () => {
-  const datasets = packs.flatMap((entry) => entry.datasets);
   assert.deepEqual(
     staleCacheFiles(
-      ["ka-benches.geojson", "old-dataset.geojson", "README.md", "ma-benches.geojson"],
-      datasets,
+      [
+        "karlsruhe",
+        "karlsruhe/ka-benches.geojson",
+        "karlsruhe/old-dataset.geojson",
+        "karlsruhe/README.md",
+        "mannheim/ma-benches.geojson",
+        // A city that is no longer shipped leaves its whole directory behind.
+        "atlantis/at-benches.geojson",
+      ],
+      packs,
     ),
-    ["old-dataset.geojson"],
+    ["atlantis/at-benches.geojson", "karlsruhe/old-dataset.geojson"],
   );
-  assert.deepEqual(staleCacheFiles([], datasets), []);
+  assert.deepEqual(staleCacheFiles([], packs), []);
+  // A dataset filed under the wrong city is stale where it sits.
+  assert.deepEqual(staleCacheFiles(["mannheim/ka-benches.geojson"], packs), [
+    "mannheim/ka-benches.geojson",
+  ]);
+});
+
+function point(lon: number, lat: number, name: string) {
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [lon, lat] },
+    properties: { name },
+  };
+}
+
+test("cache files put one feature per line so a change is one diff line", () => {
+  const serialized = serializeCacheFile({
+    type: "FeatureCollection",
+    features: [point(8.4, 49, "a"), point(8.5, 49, "b")],
+  });
+
+  assert.equal(serialized.split("\n").length - 1, 4);
+  assert.ok(serialized.endsWith("\n"));
+  assert.deepEqual(JSON.parse(serialized), {
+    type: "FeatureCollection",
+    features: [point(8.4, 49, "a"), point(8.5, 49, "b")],
+  });
+});
+
+test("feature order follows the data, not the portal's response order", () => {
+  const features = [point(8.5, 49, "b"), point(8.4, 49, "a"), point(8.4, 48, "c")];
+  const shuffled = [features[1], features[2], features[0]];
+
+  // Same data in a different order has to produce identical bytes, or every
+  // refresh would look like a change.
+  assert.equal(
+    serializeCacheFile({ type: "FeatureCollection", features }),
+    serializeCacheFile({ type: "FeatureCollection", features: shuffled }),
+  );
+  assert.deepEqual(
+    JSON.parse(serializeCacheFile({ type: "FeatureCollection", features })).features,
+    [point(8.4, 48, "c"), point(8.4, 49, "a"), point(8.5, 49, "b")],
+  );
+});
+
+test("serializing keeps the top-level keys truncation detection reads", () => {
+  const parsed = JSON.parse(
+    serializeCacheFile({
+      type: "FeatureCollection",
+      numberMatched: 900,
+      exceededTransferLimit: true,
+      features: [point(8.4, 49, "a")],
+    }),
+  );
+  assert.equal(parsed.numberMatched, 900);
+  assert.equal(parsed.exceededTransferLimit, true);
+});
+
+test("features without a usable position still serialize deterministically", () => {
+  const nullGeometry = { type: "Feature", geometry: null, properties: { name: "x" } };
+  const polygon = {
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [8.3, 49],
+          [8.31, 49],
+          [8.3, 49.1],
+        ],
+      ],
+    },
+    properties: { name: "p" },
+  };
+  const collection = {
+    type: "Feature",
+    geometry: {
+      type: "GeometryCollection",
+      geometries: [{ type: "Point", coordinates: [8.2, 49] }],
+    },
+    properties: { name: "g" },
+  };
+
+  const order = (features: unknown[]) =>
+    JSON.parse(
+      serializeCacheFile({ type: "FeatureCollection", features }),
+    ).features.map(
+      (feature: { properties: { name: string } }) => feature.properties.name,
+    );
+
+  // Polygon sorts on its first vertex, the collection on its member point, and
+  // the positionless feature lands last rather than wherever it arrived.
+  assert.deepEqual(order([nullGeometry, polygon, collection]), ["g", "p", "x"]);
+  assert.deepEqual(order([polygon, collection, nullGeometry]), ["g", "p", "x"]);
+});
+
+test("an empty collection stays valid JSON", () => {
+  assert.deepEqual(
+    JSON.parse(serializeCacheFile({ type: "FeatureCollection", features: [] })),
+    {
+      type: "FeatureCollection",
+      features: [],
+    },
+  );
 });

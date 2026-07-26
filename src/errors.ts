@@ -19,3 +19,5 @@ export const OVERPASS_TIMEOUT = "Overpass request timed out";
 export const OVERPASS_INVALID_RESPONSE = "Invalid Overpass JSON response";
 export const BROAD_QUERY_FAILED =
   "The relaxed OSM query failed, so some missing items may only need tags.";
+export const OFFICIAL_TRUNCATED =
+  "The official source returned only part of its data, so some results may be wrong.";

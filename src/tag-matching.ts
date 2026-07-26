@@ -1,3 +1,4 @@
+import { matchesExpectedValue, selectorFixedTags } from "./osm-selector";
 import type {
   Dataset,
   DatasetPoint,
@@ -9,9 +10,20 @@ import type {
 
 type Tags = Record<string, string>;
 
-/** Resolve the full set of OSM tags implied by one official record. */
+/**
+ * Resolve the full set of OSM tags implied by one official record.
+ *
+ * Tags the dataset's `osmSelector` requires are expectations by definition, so
+ * they are merged in automatically and need not be repeated in `tagMapping`.
+ * An explicit mapping wins, which is how a dataset states an expectation
+ * stricter than what it queries for.
+ */
 export function expectedTags(official: DatasetPoint, dataset: Dataset): Tags {
-  return resolveTagMapping(official.props, dataset.tagMapping);
+  return resolveTagMapping(
+    official.props,
+    dataset.tagMapping,
+    selectorFixedTags(dataset.osmSelector),
+  );
 }
 
 /** Find expected tags that are missing from or differ on an OSM object. */
@@ -26,7 +38,7 @@ export function findTagGaps(
   for (const [key, expectedValue] of Object.entries(expected)) {
     const actualValue = osm.props[key];
     const osmValue = typeof actualValue === "string" ? actualValue : undefined;
-    if (osmValue !== expectedValue) {
+    if (osmValue === undefined || !matchesExpectedValue(expectedValue, osmValue)) {
       gaps.push({ key, expected: expectedValue, osmValue });
     }
   }
@@ -37,8 +49,12 @@ export function findTagGaps(
 function resolveTagMapping(
   properties: DatasetPoint["props"],
   tagMapping: TagMapping | undefined,
+  selectorTags: Tags,
 ): Tags {
-  const tags = new Map(Object.entries(tagMapping?.fixed ?? {}));
+  const tags = new Map([
+    ...Object.entries(selectorTags),
+    ...Object.entries(tagMapping?.fixed ?? {}),
+  ]);
 
   for (const [osmKey, propertyMapping] of Object.entries(tagMapping?.fromProps ?? {})) {
     const value = resolvePropertyValue(properties, propertyMapping);
