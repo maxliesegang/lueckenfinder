@@ -2,7 +2,7 @@ import { assignPoints } from "./matching";
 import { findTagGaps } from "./tag-matching";
 import type { ConflationResult, Dataset, DatasetPoint, PointMatch } from "./types";
 
-interface OsmGroup {
+interface OsmPointGroup {
   point: DatasetPoint;
   originalIndices: number[];
 }
@@ -102,8 +102,8 @@ function groupOsmPoints(
   points: DatasetPoint[],
   excludedRefs: ReadonlySet<string> = new Set(),
   excludedPoints: ReadonlySet<DatasetPoint> = new Set(),
-): OsmGroup[] {
-  const groups: OsmGroup[] = [];
+): OsmPointGroup[] {
+  const groups: OsmPointGroup[] = [];
   const groupByRef = new Map<string, number>();
   const groupByPoint = new Map<DatasetPoint, number>();
 

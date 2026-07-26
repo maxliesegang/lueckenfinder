@@ -9,8 +9,8 @@ const OVERPASS_ENDPOINTS = [
   "https://lz4.overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
 ];
-const CLIENT_TIMEOUT_MS = 100_000;
-const SERVER_TIMEOUT_SECONDS = 90;
+const MAX_CLIENT_TIMEOUT_MS = 100_000;
+const MAX_SERVER_TIMEOUT_SECONDS = 90;
 
 export interface OverpassOptions {
   signal?: AbortSignal;
@@ -54,7 +54,7 @@ function buildOverpassQuery(queryBody: string, bbox: BBox): string {
   const bboxStr = `${minLat},${minLon},${maxLat},${maxLon}`;
   const body = queryBody.replaceAll(BBOX_TOKEN, bboxStr);
 
-  return `[out:json][timeout:${SERVER_TIMEOUT_SECONDS}];
+  return `[out:json][timeout:${MAX_SERVER_TIMEOUT_SECONDS}];
 (
 ${body}
 );
@@ -65,7 +65,7 @@ function createRequestSignal(options: OverpassOptions): {
   signal: AbortSignal;
   dispose: () => void;
 } {
-  const timeoutMs = options.timeoutMs ?? CLIENT_TIMEOUT_MS;
+  const timeoutMs = options.timeoutMs ?? MAX_CLIENT_TIMEOUT_MS;
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new TypeError("Overpass timeoutMs must be a positive finite number");
   }

@@ -1,7 +1,7 @@
 // Small geo helpers — no heavy dependency needed for point conflation.
 
-const EARTH_R = 6_371_008.8; // mean Earth radius, metres
-const DEG = Math.PI / 180;
+const EARTH_RADIUS_M = 6_371_008.8;
+const DEGREES_TO_RADIANS = Math.PI / 180;
 
 /** Great-circle distance in metres between two lon/lat points. */
 export function haversineMeters(
@@ -10,13 +10,13 @@ export function haversineMeters(
   bLon: number,
   bLat: number,
 ): number {
-  const dLat = (bLat - aLat) * DEG;
-  const dLon = (bLon - aLon) * DEG;
-  const lat1 = aLat * DEG;
-  const lat2 = bLat * DEG;
+  const dLat = (bLat - aLat) * DEGREES_TO_RADIANS;
+  const dLon = (bLon - aLon) * DEGREES_TO_RADIANS;
+  const lat1 = aLat * DEGREES_TO_RADIANS;
+  const lat2 = bLat * DEGREES_TO_RADIANS;
   const h =
     Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
-  return 2 * EARTH_R * Math.asin(Math.sqrt(h));
+  return 2 * EARTH_RADIUS_M * Math.asin(Math.sqrt(h));
 }
 
 export type BBox = [minLon: number, minLat: number, maxLon: number, maxLat: number];
@@ -88,5 +88,5 @@ export function metersToDegrees(
 }
 
 function longitudeMetersPerDegree(latitude: number): number {
-  return Math.max(111_320 * Math.abs(Math.cos(latitude * DEG)), 1);
+  return Math.max(111_320 * Math.abs(Math.cos(latitude * DEGREES_TO_RADIANS)), 1);
 }

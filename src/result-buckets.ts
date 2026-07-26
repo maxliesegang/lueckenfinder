@@ -28,8 +28,8 @@ export const RESULT_BUCKETS = {
   needsTagging: {
     id: "needsTagging",
     color: "#f59e0b",
-    nameKey: "bucket.tagDifferences.name",
-    actionKey: "bucket.tagDifferences.action",
+    nameKey: "bucket.needsTagging.name",
+    actionKey: "bucket.needsTagging.action",
   },
   matched: {
     id: "matched",
@@ -40,8 +40,8 @@ export const RESULT_BUCKETS = {
   onlyInOsm: {
     id: "onlyInOsm",
     color: "#386fa4",
-    nameKey: "bucket.osmOnly.name",
-    actionKey: "bucket.osmOnly.action",
+    nameKey: "bucket.onlyInOsm.name",
+    actionKey: "bucket.onlyInOsm.action",
   },
 } as const satisfies {
   [Id in keyof ConflationResult]: ResultBucketMetadata<Id>;
