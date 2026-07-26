@@ -84,9 +84,11 @@ Prefer fixing this in the selector where the tags actually distinguish the two
 populations — `exhaustive: false` is for when they do not. Note that narrowing a
 selector has its own cost: an object excluded by the strict criteria and carrying
 no *missing* tag cannot be rescued by the relaxed criteria either, so it is
-reported as missing from OSM although it is right there. That is why, for
-example, `car-park` still queries all of `amenity=parking` and the Karlsruhe
-multi-storey list is simply marked non-exhaustive.
+reported as missing from OSM although it is right there. That is why `car-park`
+still queries all of `amenity=parking`, why `playground` and `table-tennis` do
+not exclude `access` even though OSM holds plenty of private playgrounds and
+school tables, and why the Karlsruhe lists behind all three are marked
+non-exhaustive instead.
 
 ## Topics
 
@@ -123,6 +125,23 @@ would widen what a remote pack can put into an Overpass query.
 Check that `geojsonUrl` returns the **whole** dataset. Portals commonly cap a
 response at 1000 or 2000 records; `npm run fetch:presets` fails the dataset when
 it detects a cap, and tells you which paging parameters to add.
+
+Check what else the column you filter on holds. Portals often split one kind of
+thing into a plain group and an accessible variant — Karlsruhe publishes
+`Spielplätze` and `Spielplätze (mit rollstuhlgerechtem Zugang)` as separate
+groups. Filtering with `=` silently drops the variant; a `LIKE '%…%'` filter
+keeps both, and a `tagMapping.fromProps` rule reading the same column turns the
+distinction into `wheelchair=yes` rather than discarding it:
+
+```jsonc
+"wheelchair": {
+  "property": "gruppenname_de",
+  "values": { "Spielplätze (mit rollstuhlgerechtem Zugang)": "yes" }
+}
+```
+
+Groups left out of `values` resolve to no tag, so the plain group correctly says
+nothing about access.
 
 A pack is rejected as a whole if any dataset in it is invalid — a partly loaded
 city would silently hide datasets the author believes are published.

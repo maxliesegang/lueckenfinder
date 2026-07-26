@@ -134,6 +134,13 @@ Exclusions are usually plural: a publicly usable playground is neither
 them lets the others through. Values are compared whole, so excluding `no` never
 catches `nozzle`, and a key that is absent altogether satisfies the exclusion.
 
+Add one sparingly, though. An object the strict criteria exclude is rescued by
+the relaxed pass only if it is *missing* an expected tag; one that is fully
+tagged apart from the excluded value is rescued by neither, and is reported as
+missing from OSM although it is right there. Where an exclusion exists only to
+keep unwanted objects out of the OSM-only bucket, `"exhaustive": false` does
+that without inventing gaps.
+
 Use `anyValue` where OSM allows several values for one key. `sport=table_tennis`
 and `sport=table_tennis;basketball` describe the same table, and an exact `tags`
 condition would match only the first — reporting the second as missing from OSM.
@@ -185,6 +192,13 @@ non-scalar, non-matching, and unlisted `values` are ignored. `constant` and
 `fromProps`, so a resolved property tag overrides a fixed tag with the same key
 and a fixed tag overrides the selector's. Known values that differ from OSM
 appear in the **Tag differences** result bucket.
+
+Map only what the source genuinely knows, and only where the tag says something.
+A column whose common value merely restates what OSM already assumes — `covered`
+on an ordinary bike rack, say — turns nearly every match into a tag difference
+and buries the ones worth acting on. Leave those values out of `values` so they
+resolve to no tag at all, and use `extract` to drop placeholder values a portal
+writes for "unknown", such as a `0` clearance height.
 
 > **CORS note:** preset data is cached same-origin at build time, so it always
 > loads. Custom GeoJSON URLs are fetched live in the browser and only work if

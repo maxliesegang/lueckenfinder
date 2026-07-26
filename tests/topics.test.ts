@@ -58,16 +58,24 @@ test("tag mappings merge key by key, with the dataset winning", () => {
     ...base,
     topic: "recycling-glass",
     tagMapping: {
-      fixed: { recycling_type: "centre" },
+      fixed: { "recycling:glass": "yes" },
       fromProps: { operator: "betreiber" },
     },
   });
   assert.ok(definition);
   assert.deepEqual(definition.tagMapping, {
-    // recycling:glass_bottles comes from the topic, recycling_type is overridden.
-    fixed: { recycling_type: "centre", "recycling:glass_bottles": "yes" },
+    // recycling_type comes from the topic and survives beside the dataset's key.
+    fixed: { recycling_type: "container", "recycling:glass": "yes" },
     fromProps: { operator: "betreiber" },
   });
+
+  const overriding = parseDatasetDefinition({
+    ...base,
+    topic: "recycling-glass",
+    tagMapping: { fixed: { recycling_type: "centre" } },
+  });
+  assert.ok(overriding);
+  assert.deepEqual(overriding.tagMapping, { fixed: { recycling_type: "centre" } });
 });
 
 test("parsing an already resolved definition changes nothing", () => {

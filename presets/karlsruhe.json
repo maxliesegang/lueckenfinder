@@ -49,6 +49,16 @@
       "label": "Öffentliche Toiletten Karlsruhe",
       "exhaustive": false,
       "geojsonUrl": "https://geoportal.karlsruhe.de/ags04/rest/services/Hosted/Stadtplan_POIs_Behoerden_oeffentliche_Einrichtungen/FeatureServer/0/query?where=gruppenname_de%20LIKE%27%25%C3%96ffentliche%20Toiletten%25%27&outFields=name%2Cgruppenname_de&returnGeometry=true&f=geojson",
+      "tagMapping": {
+        "fromProps": {
+          "wheelchair": {
+            "property": "gruppenname_de",
+            "values": {
+              "Öffentliche Toiletten (behindertengerecht)": "yes"
+            }
+          }
+        }
+      },
       "attribution": "Datenquelle: Geoportal Stadt Karlsruhe",
       "sourceUrl": "https://geoportal.karlsruhe.de/"
     },
@@ -69,7 +79,20 @@
       "geojsonUrl": "https://mobil.trk.de/geoserver/TBA/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=TBA%3Aparkhaeuser&outputFormat=application%2Fjson&srsName=EPSG%3A4326&CQL_FILTER=gemeinde%3D%27Karlsruhe%27",
       "tagMapping": {
         "fromProps": {
-          "capacity": "gesamte_parkplaetze"
+          "capacity": "gesamte_parkplaetze",
+          "operator": "betreiber_name",
+          "website": "parkhaus_internet",
+          "phone": "parkhaus_telefon",
+          "wheelchair": {
+            "property": "barrierefrei",
+            "values": {
+              "T": "yes"
+            }
+          },
+          "maxheight": {
+            "property": "max_durchfahrtshoehe",
+            "extract": "^([1-9][0-9]*(?:\\.[0-9]+)?)$"
+          }
         }
       },
       "attribution": "Datenquelle: Stadt Karlsruhe, Mobilitätsportal TechnologieRegion Karlsruhe (CC BY 4.0)",
@@ -87,7 +110,6 @@
           "covered": {
             "property": "art",
             "values": {
-              "Fahrradabstellanlage": "no",
               "Fahrradabstellanlage überdacht": "yes",
               "Fahrradbox": "yes",
               "Fahrradstation": "yes"
@@ -119,6 +141,7 @@
       "id": "ka-table-tennis-tables",
       "topic": "table-tennis",
       "label": "Tischtennisplatten Karlsruhe",
+      "exhaustive": false,
       "geojsonUrl": "https://geoportal.karlsruhe.de/ags04/rest/services/Hosted/Stadtplan_POIs_Sportanlagen/FeatureServer/0/query?where=gruppenname_de%3D%27Tischtennisplatten%27&outFields=name%2Cgruppenname_de&returnGeometry=true&f=geojson",
       "attribution": "Datenquelle: Geoportal Stadt Karlsruhe",
       "sourceUrl": "https://geoportal.karlsruhe.de/"
@@ -127,6 +150,7 @@
       "id": "ka-drinking-water",
       "topic": "drinking-water",
       "label": "Trinkwasserbrunnen Karlsruhe",
+      "exhaustive": false,
       "geojsonUrl": "https://geoportal.karlsruhe.de/ags04/rest/services/Hosted/Stadtplan_POIs_Freizeit_Erholung/FeatureServer/0/query?where=gruppenname_de%3D%27Trinkwasserbrunnen%27&outFields=name%2Cgruppenname_de&returnGeometry=true&f=geojson",
       "attribution": "Datenquelle: Geoportal Stadt Karlsruhe",
       "sourceUrl": "https://geoportal.karlsruhe.de/"
@@ -135,7 +159,18 @@
       "id": "ka-playgrounds",
       "topic": "playground",
       "label": "Spielplätze Karlsruhe",
-      "geojsonUrl": "https://geoportal.karlsruhe.de/ags04/rest/services/Hosted/Stadtplan_POIs_Kinder_Jugendliche/FeatureServer/0/query?where=gruppenname_de%3D%27Spielpl%C3%A4tze%27&outFields=name%2Cgruppenname_de&returnGeometry=true&f=geojson",
+      "exhaustive": false,
+      "geojsonUrl": "https://geoportal.karlsruhe.de/ags04/rest/services/Hosted/Stadtplan_POIs_Kinder_Jugendliche/FeatureServer/0/query?where=gruppenname_de%20LIKE%27%25Spielpl%C3%A4tze%25%27&outFields=name%2Cgruppenname_de&returnGeometry=true&f=geojson",
+      "tagMapping": {
+        "fromProps": {
+          "wheelchair": {
+            "property": "gruppenname_de",
+            "values": {
+              "Spielplätze (mit rollstuhlgerechtem Zugang)": "yes"
+            }
+          }
+        }
+      },
       "attribution": "Datenquelle: Geoportal Stadt Karlsruhe",
       "sourceUrl": "https://geoportal.karlsruhe.de/"
     }

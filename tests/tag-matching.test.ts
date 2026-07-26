@@ -24,7 +24,6 @@ const fixedPresetTags: Record<string, Record<string, string>> = {
   "ka-glass-containers": {
     amenity: "recycling",
     recycling_type: "container",
-    "recycling:glass_bottles": "yes",
   },
   "ka-battery-containers": {
     amenity: "recycling",
@@ -96,24 +95,78 @@ test("bicycle parking resolves conditional property tags", () => {
       }),
       preset,
     ),
-    {
-      amenity: "bicycle_parking",
-      covered: "no",
-    },
+    // An uncovered rack is what OSM assumes anyway, so the export's most common
+    // value implies no tag at all rather than `covered=no` on every match.
+    { amenity: "bicycle_parking" },
   );
 });
 
-test("car parks resolve capacity when available", () => {
+test("car parks resolve the attributes the export carries", () => {
   const preset = PRESET_DATASETS.find(({ id }) => id === "ka-car-parks");
   assert.ok(preset);
 
-  assert.deepEqual(expectedTags(point({ gesamte_parkplaetze: 612 }), preset), {
-    amenity: "parking",
-    capacity: "612",
-  });
-  assert.deepEqual(expectedTags(point({ gesamte_parkplaetze: null }), preset), {
-    amenity: "parking",
-  });
+  assert.deepEqual(
+    expectedTags(
+      point({
+        gesamte_parkplaetze: 612,
+        betreiber_name: "Karlsruher Fächer GmbH",
+        parkhaus_internet: "https://parken-in-karlsruhe.de/",
+        parkhaus_telefon: "+49 721 981-9110",
+        barrierefrei: "T",
+        max_durchfahrtshoehe: 2.1,
+      }),
+      preset,
+    ),
+    {
+      amenity: "parking",
+      capacity: "612",
+      operator: "Karlsruher Fächer GmbH",
+      website: "https://parken-in-karlsruhe.de/",
+      phone: "+49 721 981-9110",
+      wheelchair: "yes",
+      maxheight: "2.1",
+    },
+  );
+
+  assert.deepEqual(
+    expectedTags(
+      point({
+        gesamte_parkplaetze: null,
+        betreiber_name: null,
+        barrierefrei: "F",
+        // The export writes an unknown clearance as 0, which is not a height.
+        max_durchfahrtshoehe: 0,
+      }),
+      preset,
+    ),
+    { amenity: "parking" },
+  );
+});
+
+test("accessible variants of a POI group resolve to wheelchair=yes", () => {
+  const groups: Array<[string, string, string]> = [
+    [
+      "ka-public-toilets",
+      "Öffentliche Toiletten",
+      "Öffentliche Toiletten (behindertengerecht)",
+    ],
+    ["ka-playgrounds", "Spielplätze", "Spielplätze (mit rollstuhlgerechtem Zugang)"],
+  ];
+
+  for (const [presetId, plain, accessible] of groups) {
+    const preset = PRESET_DATASETS.find(({ id }) => id === presetId);
+    assert.ok(preset);
+
+    assert.equal(
+      expectedTags(point({ gruppenname_de: accessible }), preset).wheelchair,
+      "yes",
+    );
+    // The plain group says nothing about access, so it must imply no tag.
+    assert.equal(
+      expectedTags(point({ gruppenname_de: plain }), preset).wheelchair,
+      undefined,
+    );
+  }
 });
 
 test("property mappings resolve direct, extracted, translated, and constant values", () => {

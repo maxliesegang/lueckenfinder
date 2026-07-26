@@ -8,12 +8,7 @@
       ]
     },
     "broadSelector": { "tags": { "amenity": "recycling" } },
-    "tagMapping": {
-      "fixed": {
-        "recycling_type": "container",
-        "recycling:glass_bottles": "yes"
-      }
-    }
+    "tagMapping": { "fixed": { "recycling_type": "container" } }
   },
   "recycling-batteries": {
     "osmSelector": {
@@ -42,7 +37,8 @@
   "disabled-parking-space": {
     "osmSelector": {
       "tags": { "amenity": "parking_space", "parking_space": "disabled" }
-    }
+    },
+    "broadSelector": { "tags": { "amenity": "parking_space" } }
   },
   "car-park": {
     "osmSelector": { "tags": { "amenity": "parking" } }
@@ -53,11 +49,9 @@
   "table-tennis": {
     "osmSelector": {
       "tags": { "leisure": "pitch" },
-      "anyValue": { "sport": ["table_tennis"] },
-      "exclude": { "access": ["private", "no", "permit"] }
+      "anyValue": { "sport": ["table_tennis"] }
     },
     "broadSelector": {
-      "exclude": { "access": ["private", "no", "permit"] },
       "anyOf": [
         { "anyValue": { "sport": ["table_tennis"] } },
         { "tags": { "leisure": "table_tennis_table" } }
@@ -70,9 +64,6 @@
     "broadSelector": { "tags": { "drinking_water": "yes" } }
   },
   "playground": {
-    "osmSelector": {
-      "tags": { "leisure": "playground" },
-      "exclude": { "access": ["private", "no", "permit"] }
-    }
+    "osmSelector": { "tags": { "leisure": "playground" } }
   }
 }
