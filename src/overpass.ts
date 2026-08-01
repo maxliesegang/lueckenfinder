@@ -6,15 +6,34 @@ import { isFiniteNumber, isRecord, isValidLat, isValidLon } from "./validation";
 
 const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
-  "https://lz4.overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
+  "https://lz4.overpass-api.de/api/interpreter",
 ];
-const MAX_CLIENT_TIMEOUT_MS = 100_000;
+const DEFAULT_ATTEMPT_TIMEOUT_MS = 100_000;
 const MAX_SERVER_TIMEOUT_SECONDS = 90;
+/** At most eight sequential tiles after an expensive request is rejected. */
+const MAX_TILE_DEPTH = 3;
+const MAX_RATE_LIMIT_RETRIES = 1;
+const MAX_TRANSIENT_RETRIES = 1;
+const RATE_LIMIT_DELAY_MS = 15_000;
+const TRANSIENT_RETRY_DELAY_MS = 1_000;
+const MAX_RETRY_DELAY_MS = 30_000;
+
+type FailureKind = "terminal" | "rate-limit" | "transient" | "capacity" | "query-size";
+
+class OverpassRequestError extends Error {
+  constructor(
+    message: string,
+    readonly kind: FailureKind,
+    readonly retryAfterMs?: number,
+  ) {
+    super(message);
+  }
+}
 
 export interface OverpassOptions {
   signal?: AbortSignal;
-  /** Client-side timeout. The Overpass QL server timeout remains 90 seconds. */
+  /** Per-endpoint timeout. The Overpass QL server timeout remains 90 seconds. */
   timeoutMs?: number;
 }
 
@@ -31,14 +50,7 @@ export async function runOverpass(
   validateQuery(queryBody);
   validateBbox(bbox);
 
-  const ql = buildOverpassQuery(queryBody, bbox);
-  const request = createRequestSignal(options);
-
-  try {
-    return await fetchOverpassWithFallback(ql, request.signal);
-  } finally {
-    request.dispose();
-  }
+  return queryBbox(queryBody, bbox, options, 0);
 }
 
 function validateQuery(queryBody: string): void {
@@ -58,79 +70,255 @@ function buildOverpassQuery(queryBody: string, bbox: BBox): string {
 (
 ${body}
 );
-out center tags;`;
+out center tags qt;`;
 }
 
-function createRequestSignal(options: OverpassOptions): {
+function createRequestSignal(
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
+): {
   signal: AbortSignal;
   dispose: () => void;
+  didTimeout: () => boolean;
 } {
-  const timeoutMs = options.timeoutMs ?? MAX_CLIENT_TIMEOUT_MS;
   if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
     throw new TypeError("Overpass timeoutMs must be a positive finite number");
   }
 
   const controller = new AbortController();
-  const forwardAbort = (): void => controller.abort(options.signal?.reason);
-  if (options.signal?.aborted) forwardAbort();
-  else options.signal?.addEventListener("abort", forwardAbort, { once: true });
+  let timedOut = false;
+  const forwardAbort = (): void => controller.abort(signal?.reason);
+  if (signal?.aborted) forwardAbort();
+  else signal?.addEventListener("abort", forwardAbort, { once: true });
 
-  const timer = setTimeout(
-    () => controller.abort(new DOMException(OVERPASS_TIMEOUT, "TimeoutError")),
-    timeoutMs,
-  );
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort(new DOMException(OVERPASS_TIMEOUT, "TimeoutError"));
+  }, timeoutMs);
 
   return {
     signal: controller.signal,
+    didTimeout: () => timedOut,
     dispose: () => {
       clearTimeout(timer);
-      options.signal?.removeEventListener("abort", forwardAbort);
+      signal?.removeEventListener("abort", forwardAbort);
     },
   };
 }
 
+async function queryBbox(
+  queryBody: string,
+  bbox: BBox,
+  options: OverpassOptions,
+  depth: number,
+): Promise<DatasetPoint[]> {
+  try {
+    return await fetchOverpassWithFallback(
+      buildOverpassQuery(queryBody, bbox),
+      options.signal,
+      options.timeoutMs ?? DEFAULT_ATTEMPT_TIMEOUT_MS,
+    );
+  } catch (error) {
+    if (
+      !(error instanceof OverpassRequestError) ||
+      error.kind !== "query-size" ||
+      depth >= MAX_TILE_DEPTH
+    ) {
+      throw error;
+    }
+
+    const points: DatasetPoint[] = [];
+    for (const tile of splitBbox(bbox)) {
+      points.push(...(await queryBbox(queryBody, tile, options, depth + 1)));
+    }
+    return deduplicatePoints(points);
+  }
+}
+
 async function fetchOverpassWithFallback(
   ql: string,
-  signal: AbortSignal,
+  signal: AbortSignal | undefined,
+  timeoutMs: number,
 ): Promise<DatasetPoint[]> {
   const body = `data=${encodeURIComponent(ql)}`;
   let lastError: Error | undefined;
+  let sawFailure = false;
+  let capacityFailuresOnly = true;
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
-    if (signal.aborted) break;
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body,
-        signal,
-      });
-      const responseError = await parseOverpassResponseError(response);
-      if (responseError) {
+    let rateLimitRetries = 0;
+    let transientRetries = 0;
+    while (true) {
+      throwIfAborted(signal);
+      const request = createRequestSignal(signal, timeoutMs);
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body,
+          signal: request.signal,
+        });
+        const responseError = await parseOverpassResponseError(response);
+        if (!responseError) {
+          return parseOverpassResponse(await response.json());
+        }
+        if (responseError.kind === "terminal" || responseError.kind === "query-size") {
+          throw responseError;
+        }
+        if (
+          responseError.kind === "rate-limit" &&
+          rateLimitRetries < MAX_RATE_LIMIT_RETRIES
+        ) {
+          rateLimitRetries += 1;
+          await waitForRetry(responseError.retryAfterMs, RATE_LIMIT_DELAY_MS, signal);
+          continue;
+        }
+        if (
+          responseError.kind === "transient" &&
+          transientRetries < MAX_TRANSIENT_RETRIES
+        ) {
+          transientRetries += 1;
+          await waitForRetry(
+            responseError.retryAfterMs,
+            TRANSIENT_RETRY_DELAY_MS,
+            signal,
+          );
+          continue;
+        }
         lastError = responseError;
-        continue;
+        sawFailure = true;
+        if (responseError.kind !== "capacity") capacityFailuresOnly = false;
+        break;
+      } catch (error) {
+        throwIfAborted(signal);
+        if (request.didTimeout()) {
+          lastError = new DOMException(OVERPASS_TIMEOUT, "TimeoutError");
+          sawFailure = true;
+          capacityFailuresOnly = false;
+          break;
+        }
+        if (error instanceof OverpassRequestError) {
+          if (error.kind === "terminal" || error.kind === "query-size") throw error;
+          lastError = error;
+          sawFailure = true;
+          if (error.kind !== "capacity") capacityFailuresOnly = false;
+          break;
+        }
+        lastError = error instanceof Error ? error : new Error(String(error));
+        sawFailure = true;
+        capacityFailuresOnly = false;
+        break;
+      } finally {
+        request.dispose();
       }
-      return parseOverpassResponse(await response.json());
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") throw error;
-      lastError = error instanceof Error ? error : new Error(String(error));
     }
   }
 
+  if (sawFailure && capacityFailuresOnly && lastError) {
+    throw new OverpassRequestError(lastError.message, "query-size");
+  }
   throw lastError ?? new Error("All Overpass endpoints failed");
 }
 
-async function parseOverpassResponseError(response: Response): Promise<Error | null> {
+async function parseOverpassResponseError(
+  response: Response,
+): Promise<OverpassRequestError | null> {
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.includes("application/json")) {
-    return new Error(
-      `Overpass error: ${overpassErrorDetail(await response.text(), response.status)}`,
+    const detail = overpassErrorDetail(await response.text(), response.status);
+    const message =
+      !response.ok && detail === `HTTP ${response.status}`
+        ? `Overpass returned ${response.status} ${response.statusText}`
+        : `Overpass error: ${detail}`;
+    return new OverpassRequestError(
+      message,
+      isQuerySizeError(detail) ? "query-size" : failureKind(response.status),
+      retryAfterMs(response),
     );
   }
   if (!response.ok) {
-    return new Error(`Overpass returned ${response.status} ${response.statusText}`);
+    return new OverpassRequestError(
+      `Overpass returned ${response.status} ${response.statusText}`,
+      failureKind(response.status),
+      retryAfterMs(response),
+    );
   }
   return null;
+}
+
+function failureKind(status: number): FailureKind {
+  if (status === 429) return "rate-limit";
+  if (status === 504) return "capacity";
+  if (status === 502 || status === 503) return "transient";
+  return "terminal";
+}
+
+function isQuerySizeError(detail: string): boolean {
+  return /timed out|timeout|out of memory|exceed(?:ed|s).*memory/i.test(detail);
+}
+
+function retryAfterMs(response: Response): number | undefined {
+  const value = response.headers.get("retry-after");
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1_000;
+  const date = Date.parse(value);
+  return Number.isFinite(date) ? Math.max(0, date - Date.now()) : undefined;
+}
+
+async function waitForRetry(
+  retryAfter: number | undefined,
+  defaultDelay: number,
+  signal: AbortSignal | undefined,
+): Promise<void> {
+  throwIfAborted(signal);
+  const delay = Math.min(
+    retryAfter ?? defaultDelay + Math.random() * defaultDelay * 0.1,
+    MAX_RETRY_DELAY_MS,
+  );
+  await new Promise<void>((resolve, reject) => {
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(signal?.reason ?? new DOMException("Aborted", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, delay);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+function throwIfAborted(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw signal.reason ?? new DOMException("Aborted", "AbortError");
+  }
+}
+
+function splitBbox(bbox: BBox): [BBox, BBox] {
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  if (maxLon - minLon >= maxLat - minLat) {
+    const middle = (minLon + maxLon) / 2;
+    return [
+      [minLon, minLat, middle, maxLat],
+      [middle, minLat, maxLon, maxLat],
+    ];
+  }
+  const middle = (minLat + maxLat) / 2;
+  return [
+    [minLon, minLat, maxLon, middle],
+    [minLon, middle, maxLon, maxLat],
+  ];
+}
+
+function deduplicatePoints(points: DatasetPoint[]): DatasetPoint[] {
+  const seen = new Set<string>();
+  return points.filter((point) => {
+    const key = point.osmRef ?? JSON.stringify([point.lon, point.lat, point.props]);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function overpassErrorDetail(text: string, status: number): string {

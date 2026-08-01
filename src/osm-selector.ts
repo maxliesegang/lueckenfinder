@@ -117,6 +117,28 @@ export function matchesSelector(selector: OsmSelector, point: DatasetPoint): boo
 }
 
 /**
+ * Whether every object matched by `subset` is also matched by `superset`.
+ *
+ * This deliberately proves only the implications the selector model can state
+ * cheaply. Returning false merely misses an optimisation; it never narrows an
+ * Overpass request incorrectly.
+ */
+export function selectorIsSubsetOf(
+  subset: OsmSelector,
+  superset: OsmSelector,
+): boolean {
+  if (!typesAreSubset(subset.types, superset.types)) return false;
+
+  const subsetBranches = subset.anyOf ?? [{}];
+  const supersetBranches = superset.anyOf ?? [{}];
+  return subsetBranches.every((subsetBranch) =>
+    supersetBranches.some((supersetBranch) =>
+      filterListImplies([subset, subsetBranch], [superset, supersetBranch]),
+    ),
+  );
+}
+
+/**
  * Tags implied by the selector for every matching object: those declared
  * directly on it, plus any that every `anyOf` branch agrees on. A tag only some
  * branches require holds for some matches but not all, so it is not an
@@ -389,6 +411,97 @@ function matchesTypes(
   if (types === undefined || types.includes("nwr")) return true;
   const elementType = point.osmRef?.split("/")[0];
   return elementType !== undefined && types.includes(elementType as OsmElementType);
+}
+
+function typesAreSubset(
+  subset: OsmElementType[] | undefined,
+  superset: OsmElementType[] | undefined,
+): boolean {
+  const subsetTypes = expandedTypes(subset);
+  const supersetTypes = new Set(expandedTypes(superset));
+  return subsetTypes.every((type) => supersetTypes.has(type));
+}
+
+function expandedTypes(
+  types: OsmElementType[] | undefined,
+): Array<"node" | "way" | "relation"> {
+  if (types === undefined || types.includes("nwr")) {
+    return ["node", "way", "relation"];
+  }
+  return types as Array<"node" | "way" | "relation">;
+}
+
+function filterListImplies(subset: OsmTagFilter[], superset: OsmTagFilter[]): boolean {
+  for (const filter of superset) {
+    for (const [key, value] of Object.entries(filter.tags ?? {})) {
+      if (!subset.some((candidate) => candidate.tags?.[key] === value)) return false;
+    }
+    for (const [key, values] of Object.entries(filter.anyValue ?? {})) {
+      if (!impliesAnyValue(subset, key, values)) return false;
+    }
+    for (const key of filter.present ?? []) {
+      if (!impliesPresence(subset, key)) return false;
+    }
+    for (const key of filter.absent ?? []) {
+      if (!subset.some((candidate) => candidate.absent?.includes(key))) return false;
+    }
+    for (const [key, values] of Object.entries(filter.exclude ?? {})) {
+      if (!impliesExclusion(subset, key, values)) return false;
+    }
+  }
+  return true;
+}
+
+function impliesAnyValue(
+  filters: OsmTagFilter[],
+  key: string,
+  values: string[],
+): boolean {
+  for (const filter of filters) {
+    const exact = filter.tags?.[key];
+    if (exact !== undefined && values.includes(exact)) return true;
+    const anyValue = filter.anyValue?.[key];
+    if (anyValue?.every((value) => values.includes(value))) return true;
+  }
+  return false;
+}
+
+function impliesPresence(filters: OsmTagFilter[], key: string): boolean {
+  return filters.some(
+    (filter) =>
+      filter.tags?.[key] !== undefined ||
+      filter.anyValue?.[key] !== undefined ||
+      filter.present?.includes(key),
+  );
+}
+
+function impliesExclusion(
+  filters: OsmTagFilter[],
+  key: string,
+  excluded: string[],
+): boolean {
+  for (const filter of filters) {
+    if (filter.absent?.includes(key)) return true;
+
+    const exact = filter.tags?.[key];
+    if (exact !== undefined && !excluded.includes(exact)) return true;
+
+    const ownExclusions = filter.exclude?.[key];
+    if (ownExclusions && excluded.every((value) => ownExclusions.includes(value))) {
+      return true;
+    }
+
+    const requiredEntries = filter.anyValue?.[key];
+    if (
+      requiredEntries &&
+      excluded.every((value) =>
+        valueEntries(value).every((entry) => !requiredEntries.includes(entry)),
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function matchesFilter(filter: OsmTagFilter, props: DatasetPoint["props"]): boolean {

@@ -31,6 +31,37 @@ test("a selector plus relaxed criteria resolve to a single unioned query", () =>
   assert.equal(plan.isStrictMatch(osm({ drinking_water: "yes" })), false);
 });
 
+test("a broad selector that contains the strict selector avoids a redundant query", () => {
+  const plan = buildQueryPlan({
+    ...base,
+    osmSelector: {
+      tags: { amenity: "recycling" },
+      anyOf: [
+        { tags: { "recycling:glass": "yes" } },
+        { tags: { "recycling:glass_bottles": "yes" } },
+      ],
+    },
+    broadSelector: { tags: { amenity: "recycling" } },
+  });
+
+  assert.equal(plan.query, 'nwr["amenity"="recycling"]({{bbox}});');
+  assert.equal(plan.broadQuery, null);
+  assert.ok(plan.isStrictMatch);
+});
+
+test("selector containment respects element types", () => {
+  const plan = buildQueryPlan({
+    ...base,
+    osmSelector: { types: ["nwr"], tags: { amenity: "bench" } },
+    broadSelector: { types: ["node"], tags: { amenity: "bench" } },
+  });
+
+  assert.equal(
+    plan.query,
+    'nwr["amenity"="bench"]({{bbox}});\nnode["amenity"="bench"]({{bbox}});',
+  );
+});
+
 test("a selector works with a raw relaxed query, still in one request", () => {
   const plan = buildQueryPlan({
     ...base,

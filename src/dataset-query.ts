@@ -14,7 +14,7 @@
  */
 
 import { BBOX_TOKEN } from "./dataset-criteria";
-import { matchesSelector, selectorQuery } from "./osm-selector";
+import { matchesSelector, selectorIsSubsetOf, selectorQuery } from "./osm-selector";
 import type { DatasetDefinition, DatasetPoint } from "./types";
 
 export interface DatasetQueryPlan {
@@ -47,7 +47,10 @@ export function buildQueryPlan(dataset: DatasetDefinition): DatasetQueryPlan {
 
   const selector = dataset.osmSelector;
   return {
-    query: `${strictQuery}\n${broadQuery}`,
+    query:
+      dataset.broadSelector && selectorIsSubsetOf(selector, dataset.broadSelector)
+        ? broadQuery
+        : `${strictQuery}\n${broadQuery}`,
     broadQuery: null,
     isStrictMatch: (point) => matchesSelector(selector, point),
   };

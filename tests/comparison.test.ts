@@ -136,14 +136,15 @@ test("two datasets asking OSM the same question share one Overpass request", asy
   await compareDataset(glass, 30, { cache, dependencies });
   assert.equal(queries.length, 1);
 
-  // A different strict half, so this one still has to be fetched…
+  // Both strict selectors are subsets of the same relaxed selector, so the
+  // shared broad request is sufficient and each result is classified locally.
   await compareDataset(batteries, 30, { cache, dependencies });
-  assert.equal(queries.length, 2);
+  assert.equal(queries.length, 1);
 
-  // …but re-running either dataset now costs nothing.
+  // Re-running either dataset also costs nothing.
   await compareDataset(glass, 30, { cache, dependencies });
   await compareDataset(batteries, 30, { cache, dependencies });
-  assert.equal(queries.length, 2);
+  assert.equal(queries.length, 1);
 });
 
 test("an identical relaxed query is fetched once across datasets", async () => {

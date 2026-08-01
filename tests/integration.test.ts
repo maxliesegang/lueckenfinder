@@ -409,6 +409,88 @@ test("Overpass substitutes all bbox tokens in the encoded request", async () => 
   const query = decodeURIComponent(requestBody.slice("data=".length));
   assert.doesNotMatch(query, /\{\{bbox\}\}/);
   assert.equal(query.match(/48,8,50,9/g)?.length, 2);
+  assert.match(query, /out center tags qt;/);
+});
+
+test("Overpass does not retry a deterministic query error", async () => {
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    return new Response("Error:</p><p>parse error</p>", {
+      status: 400,
+      statusText: "Bad Request",
+      headers: { "Content-Type": "text/html" },
+    });
+  };
+
+  await assert.rejects(runOverpass(STRICT_QUERY, [8, 48, 9, 50]), /parse error/);
+  assert.equal(calls, 1);
+});
+
+test("Overpass waits and retries a rate-limited endpoint", async () => {
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return Response.json(
+        {},
+        {
+          status: 429,
+          statusText: "Too Many Requests",
+          headers: { "Retry-After": "0" },
+        },
+      );
+    }
+    return Response.json({ elements: [] });
+  };
+
+  assert.deepEqual(await runOverpass(STRICT_QUERY, [8, 48, 9, 50]), []);
+  assert.equal(calls, 2);
+});
+
+test("Overpass retries a transient endpoint failure with bounded backoff", async () => {
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return Response.json(
+        {},
+        {
+          status: 503,
+          statusText: "Service Unavailable",
+          headers: { "Retry-After": "0" },
+        },
+      );
+    }
+    return Response.json({ elements: [] });
+  };
+
+  assert.deepEqual(await runOverpass(STRICT_QUERY, [8, 48, 9, 50]), []);
+  assert.equal(calls, 2);
+});
+
+test("Overpass subdivides a query rejected for its runtime", async () => {
+  const bboxes: string[] = [];
+  globalThis.fetch = async (_input, init) => {
+    const query = decodeURIComponent(String(init?.body).slice("data=".length));
+    const bbox = /\(([-\d.,]+)\);/.exec(query)?.[1];
+    assert.ok(bbox);
+    bboxes.push(bbox);
+
+    if (bboxes.length === 1) {
+      return new Response("runtime error: Query timed out in statement", {
+        headers: { "Content-Type": "text/html" },
+      });
+    }
+    return Response.json({
+      elements: [{ type: "node", id: 1, lat: 49, lon: 8.5 }],
+    });
+  };
+
+  const points = await runOverpass(STRICT_QUERY, [8, 48, 9, 50]);
+  assert.deepEqual(bboxes, ["48,8,50,9", "48,8,49,9", "49,8,50,9"]);
+  assert.equal(points.length, 1);
+  assert.equal(points[0]?.osmRef, "node/1");
 });
 
 test("Overpass applies a client-side timeout", async () => {
