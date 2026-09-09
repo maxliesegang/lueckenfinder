@@ -29,21 +29,21 @@
     "@kern-ux-annex/kern-react-kit": "^2.40.0",
     "flatbush": "^4.4.0",
     "i18next": "^26.3.1",
-    "maplibre-gl": "^5.24.0",
+    "maplibre-gl": "^6.8.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-i18next": "^17.0.8",
     "react-map-gl": "^8.1.1"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.0",
+    "@biomejs/biome": "2.5.12",
     "@types/geojson": "^7946.0.16",
     "@types/node": "^26.0.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
     "tsx": "^4.19.2",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vite": "^8.0.16"
   }
 }
